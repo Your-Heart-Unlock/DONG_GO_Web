@@ -66,7 +66,9 @@ export default function PlaceBottomSheet({ place, onClose }: PlaceBottomSheetPro
                 {place.category}
               </span>
               {place.source === 'naver_import' && (
-                <span className="text-xs text-gray-500">네이버 지도 가져오기</span>
+                <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-500 text-white text-xs font-medium">
+                  네이버
+                </span>
               )}
             </div>
           </div>

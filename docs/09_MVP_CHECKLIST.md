@@ -8,7 +8,7 @@
 - [x] Next.js(Typescript) 프로젝트 생성
 - [x] ESLint/Prettier 세팅
 - [x] 환경변수 구조 확정 (Firebase config, Naver Map key)
-- [ ] Vercel 배포 파이프라인 연결 (나중에)
+- [x] Vercel 배포 파이프라인 연결
 
 ---
 
@@ -52,14 +52,15 @@
 ---
 
 ## F. 장소 상세 페이지(B 정책) (2d)
-- [ ] `/places/[placeId]` place 기본 정보 표시
+- [x] `/places/[placeId]` place 기본 정보 표시
 - [ ] stats 문서 읽어서 통계 표시(guest/pending도 가능)
-- [ ] member/owner일 때만:
+- [x] member/owner일 때만:
   - [ ] 리뷰 리스트 표시
   - [ ] 방문 기록 표시
   - [ ] 사진 갤러리 표시
-- [ ] pending/guest일 때:
-  - [ ] 리뷰/방문/사진 UI는 “잠금 상태”로 표시(안내 문구)
+- [x] pending/guest일 때:
+  - [x] 리뷰/방문/사진 UI는 "잠금 상태"로 표시(안내 문구)
+- [ ] 카카오 지도 버튼 연동 (장소 상세 페이지)
 
 ---
 
@@ -92,7 +93,7 @@
 
 ## J. Admin Console (owner only) (3~4d)
 - [x] `/admin` dashboard (기본 구조)
-- [ ] `/admin/users`: pending → member 승인
+- [x] `/admin/users`: pending → member 승인
 - [ ] `/admin/requests`: 요청 승인/거절 (diff view)
 - [x] `/admin/import`: JSON import(dry-run → commit)
   - [x] 네이버 북마크 JSON 파싱
