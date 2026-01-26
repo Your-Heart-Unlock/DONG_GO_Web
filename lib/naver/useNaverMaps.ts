@@ -35,7 +35,7 @@ export function useNaverMaps() {
     // 스크립트 동적 로드
     const script = document.createElement('script');
     script.id = SCRIPT_ID;
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpClientId=${clientId}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
     script.async = true;
     script.defer = true;
 
