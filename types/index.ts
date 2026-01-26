@@ -125,6 +125,15 @@ export interface ImportPreviewRow {
 
 export type ImportDuplicatePolicy = 'SKIP' | 'UPDATE';
 
+export interface ImportResult {
+  total: number;
+  created: number;
+  updated: number;
+  skipped: number;
+  failed: number;
+  errors: string[];
+}
+
 // Admin Log Types
 export interface AdminLog {
   logId: string;

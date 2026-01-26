@@ -4,7 +4,8 @@
       "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --no-src-dir --import-alias \"@/*\")",
       "Bash(npm install)",
       "Bash(npm run type-check:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(npx eslint:*)"
     ]
   }
 }

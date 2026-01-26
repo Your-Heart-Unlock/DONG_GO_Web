@@ -9,7 +9,7 @@ import {
   validateImportRows,
   calculatePreviewSummary,
 } from '@/lib/admin/importParser';
-import { ImportRow, ImportPreviewRow, ImportDuplicatePolicy } from '@/types';
+import { ImportPreviewRow, ImportDuplicatePolicy, ImportResult } from '@/types';
 
 export default function AdminImportPage() {
   const { firebaseUser } = useAuth();
@@ -25,7 +25,7 @@ export default function AdminImportPage() {
 
   // Step 3: Commit
   const [committing, setCommitting] = useState(false);
-  const [commitResult, setCommitResult] = useState<any>(null);
+  const [commitResult, setCommitResult] = useState<ImportResult | null>(null);
 
   const handleParse = async () => {
     setParseError('');
@@ -52,8 +52,8 @@ export default function AdminImportPage() {
       // 3. 검증 및 Preview
       const validated = validateImportRows(rows, existingPlaceIds);
       setPreviewRows(validated);
-    } catch (error: any) {
-      setParseError(error.message || '파싱 중 오류가 발생했습니다.');
+    } catch (error) {
+      setParseError(error instanceof Error ? error.message : '파싱 중 오류가 발생했습니다.');
     } finally {
       setParsing(false);
     }
@@ -117,8 +117,8 @@ export default function AdminImportPage() {
       // 성공 시 입력 초기화
       setJsonText('');
       setPreviewRows([]);
-    } catch (error: any) {
-      alert(`Import 실패: ${error.message}`);
+    } catch (error) {
+      alert(`Import 실패: ${error instanceof Error ? error.message : '알 수 없는 오류'}`);
     } finally {
       setCommitting(false);
     }
