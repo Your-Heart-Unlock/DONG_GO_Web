@@ -261,8 +261,8 @@ Error: Could not load the default credentials
 - [x] `.env.local` 파일이 `.gitignore`에 포함되어 있음
 - [x] `service-account-key.json`이 Git에 커밋되지 않음
 - [ ] Firebase Console에서 Authorized domains 설정 완료
-- [ ] Firestore Rules 배포 완료 (섹션 D에서 진행)
-- [ ] Storage Rules 배포 완료 (섹션 D에서 진행)
+- [x] Firestore Rules 배포 완료 (섹션 D에서 진행)
+- [x] Storage Rules 배포 완료 (섹션 D에서 진행)
 
 ---
 

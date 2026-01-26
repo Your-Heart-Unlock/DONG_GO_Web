@@ -65,11 +65,12 @@
 ---
 
 ## G. 장소 추가(네이버 placeId 기반) (1.5d)
-- [ ] `/add` 구현: 네이버 검색 → place 선택
-- [ ] placeId 기준 중복 체크
-  - [ ] 없으면 `places/{placeId}` create(source=user_added)
-  - [ ] 있으면 상세로 이동
-- [ ] place 생성 시 최소 필드 검증
+- [x] `/add` 구현: 네이버 검색 → place 선택
+- [x] placeId 기준 중복 체크
+  - [x] 없으면 `places/{placeId}` create(source=user_added)
+  - [x] 있으면 상세로 이동
+- [x] place 생성 시 최소 필드 검증
+- [x] 홈 화면에 장소 추가 FAB 버튼 (member/owner만)
 
 ---
 
@@ -113,6 +114,16 @@
 - [ ] 테스트 계정 시나리오:
   - [ ] guest → pending → member → owner 흐름 검증
   - [ ] 권한 우회 시도 테스트(직접 URL 접근, 콘솔 write)
+
+---
+
+## L. 외부 평점 데이터 크롤링 (MVP 이후)
+- [ ] 네이버 지도 평점/리뷰 개수 크롤링
+- [ ] 카카오 지도 평점/리뷰 개수 크롤링
+- [ ] 구글 지도 평점/리뷰 개수 크롤링
+- [ ] 크롤링 스케줄러 (주기적 실행)
+- [ ] places 문서에 외부 평점 데이터 저장
+- [ ] 장소 상세 페이지에 외부 평점 표시
 
 ---
 
