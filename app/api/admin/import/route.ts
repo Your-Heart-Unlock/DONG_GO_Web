@@ -15,6 +15,14 @@ import { ImportRow, ImportDuplicatePolicy } from '@/types';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Firebase Admin 초기화 확인
+    if (!adminAuth || !adminDb) {
+      return NextResponse.json(
+        { error: 'Firebase Admin not initialized' },
+        { status: 500 }
+      );
+    }
+
     // 인증 확인
     const authHeader = request.headers.get('authorization');
     if (!authHeader?.startsWith('Bearer ')) {
