@@ -1,21 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
- * 네이버 지역 검색 API
- * GET /api/search/places?query=검색어
+ * 카카오 장소 검색 API
+ * GET /api/search/places?query=검색어&page=1
  *
- * 네이버 오픈 API (developers.naver.com) 사용
+ * 카카오 REST API (developers.kakao.com) 사용
  * 필요한 환경변수:
- * - NAVER_SEARCH_CLIENT_ID
- * - NAVER_SEARCH_CLIENT_SECRET
+ * - KAKAO_REST_API_KEY
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('query');
     const page = parseInt(searchParams.get('page') || '1');
-    const display = 10; // 한 페이지당 결과 수
-    const start = (page - 1) * display + 1; // 시작 인덱스 (1부터 시작)
+    const size = 10; // 한 페이지당 결과 수 (카카오 최대 15)
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json(
@@ -24,29 +22,27 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const clientId = process.env.NAVER_SEARCH_CLIENT_ID;
-    const clientSecret = process.env.NAVER_SEARCH_CLIENT_SECRET;
+    const apiKey = process.env.KAKAO_REST_API_KEY;
 
-    if (!clientId || !clientSecret) {
+    if (!apiKey) {
       return NextResponse.json(
-        { error: '네이버 검색 API가 설정되지 않았습니다.' },
+        { error: '카카오 검색 API가 설정되지 않았습니다.' },
         { status: 500 }
       );
     }
 
-    // 네이버 지역 검색 API 호출
+    // 카카오 키워드 장소 검색 API 호출
     const response = await fetch(
-      `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=${display}&start=${start}&sort=comment`,
+      `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&page=${page}&size=${size}`,
       {
         headers: {
-          'X-Naver-Client-Id': clientId,
-          'X-Naver-Client-Secret': clientSecret,
+          Authorization: `KakaoAK ${apiKey}`,
         },
       }
     );
 
     if (!response.ok) {
-      console.error('Naver API error:', response.status, await response.text());
+      console.error('Kakao API error:', response.status, await response.text());
       return NextResponse.json(
         { error: '검색에 실패했습니다.' },
         { status: 500 }
@@ -56,54 +52,36 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
 
     // 응답 데이터 변환
-    const places = data.items.map((item: {
-      title: string;
-      link: string;
-      category: string;
-      description: string;
-      telephone: string;
-      address: string;
-      roadAddress: string;
-      mapx: string;
-      mapy: string;
-    }) => {
-      // 네이버 지도 링크에서 placeId 추출 시도
-      // link 형식: https://map.naver.com/p/entry/place/1234567890
-      let placeId = '';
-      const linkMatch = item.link.match(/place\/(\d+)/);
-      if (linkMatch) {
-        placeId = linkMatch[1];
-      } else {
-        // placeId를 추출할 수 없으면 좌표 기반으로 생성
-        placeId = `${item.mapx}_${item.mapy}`;
-      }
+    const places = data.documents.map((doc: {
+      id: string;
+      place_name: string;
+      category_name: string;
+      phone: string;
+      address_name: string;
+      road_address_name: string;
+      x: string;
+      y: string;
+      place_url: string;
+    }) => ({
+      placeId: doc.id,
+      name: doc.place_name,
+      address: doc.road_address_name || doc.address_name,
+      category: doc.category_name.split('>').pop()?.trim() || doc.category_name,
+      lat: parseFloat(doc.y),
+      lng: parseFloat(doc.x),
+      telephone: doc.phone || undefined,
+      link: doc.place_url,
+    }));
 
-      // 좌표 변환 (카텍 좌표 -> WGS84)
-      // 네이버 지역 검색 API는 카텍 좌표를 반환
-      const lng = parseInt(item.mapx) / 10000000;
-      const lat = parseInt(item.mapy) / 10000000;
-
-      return {
-        placeId,
-        name: item.title.replace(/<[^>]*>/g, ''), // HTML 태그 제거
-        address: item.roadAddress || item.address,
-        category: item.category.split('>').pop()?.trim() || item.category,
-        lat,
-        lng,
-        telephone: item.telephone,
-        link: item.link,
-      };
-    });
+    const meta = data.meta;
 
     return NextResponse.json({
       places,
       pagination: {
-        total: data.total,
-        start: data.start,
-        display: data.display,
+        total: meta.pageable_count,
         page,
-        totalPages: Math.ceil(data.total / display),
-        hasMore: start + display <= data.total,
+        totalPages: Math.ceil(meta.pageable_count / size),
+        hasMore: !meta.is_end,
       },
     });
   } catch (error) {

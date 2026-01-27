@@ -31,13 +31,15 @@ export default function AddPlacePage() {
 
   const [query, setQuery] = useState('');
   const [searching, setSearching] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [pagination, setPagination] = useState<Pagination | null>(null);
   const [error, setError] = useState('');
   const [adding, setAdding] = useState<string | null>(null);
 
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
-  // 검색 실행
+  // 검색 실행 (새 검색)
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -49,9 +51,10 @@ export default function AddPlacePage() {
     setSearching(true);
     setError('');
     setResults([]);
+    setPagination(null);
 
     try {
-      const response = await fetch(`/api/search/places?query=${encodeURIComponent(query)}`);
+      const response = await fetch(`/api/search/places?query=${encodeURIComponent(query)}&page=1`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -59,6 +62,7 @@ export default function AddPlacePage() {
       }
 
       setResults(data.places);
+      setPagination(data.pagination);
 
       if (data.places.length === 0) {
         setError('검색 결과가 없습니다.');
@@ -67,6 +71,30 @@ export default function AddPlacePage() {
       setError(err instanceof Error ? err.message : '검색 중 오류가 발생했습니다.');
     } finally {
       setSearching(false);
+    }
+  };
+
+  // 더 보기
+  const handleLoadMore = async () => {
+    if (!pagination?.hasMore || loadingMore) return;
+
+    const nextPage = pagination.page + 1;
+    setLoadingMore(true);
+
+    try {
+      const response = await fetch(`/api/search/places?query=${encodeURIComponent(query)}&page=${nextPage}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || '검색에 실패했습니다.');
+      }
+
+      setResults((prev) => [...prev, ...data.places]);
+      setPagination(data.pagination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '추가 결과를 불러오는 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -80,23 +108,39 @@ export default function AddPlacePage() {
     setAdding(place.placeId);
 
     try {
-      // 이미 존재하는지 확인
-      const existing = await getPlaceById(place.placeId);
+      // 네이버 placeId 매칭 시도
+      let finalPlaceId = place.placeId; // 카카오 ID를 기본값으로
+      try {
+        const resolveRes = await fetch(
+          `/api/search/naver-resolve?name=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}`
+        );
+        const resolveData = await resolveRes.json();
+        if (resolveData.naverPlaceId) {
+          finalPlaceId = resolveData.naverPlaceId;
+        }
+      } catch {
+        // 네이버 매칭 실패 시 카카오 ID 유지
+      }
 
-      if (existing) {
-        // 이미 존재하면 상세 페이지로 이동
+      // 이미 존재하는지 확인 (네이버 ID, 카카오 ID 모두)
+      const existing = await getPlaceById(finalPlaceId);
+      const existingKakao = finalPlaceId !== place.placeId ? await getPlaceById(place.placeId) : null;
+
+      const found = existing || existingKakao;
+      if (found) {
+        const foundId = existing ? finalPlaceId : place.placeId;
         const goToDetail = confirm(
           `"${place.name}"은(는) 이미 등록된 장소입니다.\n상세 페이지로 이동할까요?`
         );
         if (goToDetail) {
-          router.push(`/places/${place.placeId}`);
+          router.push(`/places/${foundId}`);
         }
         return;
       }
 
       // 신규 생성
       await createPlace({
-        placeId: place.placeId,
+        placeId: finalPlaceId,
         name: place.name,
         address: place.address,
         lat: place.lat,
@@ -108,7 +152,7 @@ export default function AddPlacePage() {
       });
 
       alert(`"${place.name}"이(가) 추가되었습니다.`);
-      router.push(`/places/${place.placeId}`);
+      router.push(`/places/${finalPlaceId}`);
     } catch (err) {
       console.error('Failed to add place:', err);
       alert(err instanceof Error ? err.message : '장소 추가에 실패했습니다.');
@@ -192,7 +236,7 @@ export default function AddPlacePage() {
             </button>
           </div>
           <p className="text-xs text-gray-500">
-            네이버 지도에서 장소를 검색하여 추가합니다.
+            카카오 지도에서 장소를 검색하여 추가합니다.
           </p>
         </form>
 
@@ -207,7 +251,7 @@ export default function AddPlacePage() {
         {results.length > 0 && (
           <div className="space-y-3">
             <h2 className="text-sm font-medium text-gray-700">
-              검색 결과 ({results.length}개)
+              검색 결과 {pagination ? `(${results.length} / ${pagination.total}개)` : `(${results.length}개)`}
             </h2>
             <div className="space-y-2">
               {results.map((place) => (
@@ -245,6 +289,15 @@ export default function AddPlacePage() {
                 </div>
               ))}
             </div>
+            {pagination?.hasMore && (
+              <button
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="w-full py-3 text-sm font-medium text-blue-600 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 disabled:text-gray-400 disabled:bg-gray-50 transition-colors"
+              >
+                {loadingMore ? '불러오는 중...' : '더 보기'}
+              </button>
+            )}
           </div>
         )}
 
