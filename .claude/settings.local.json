@@ -5,7 +5,8 @@
       "Bash(npm install)",
       "Bash(npm run type-check:*)",
       "Bash(npm run build:*)",
-      "Bash(npx eslint:*)"
+      "Bash(npx eslint:*)",
+      "Bash(npm install:*)"
     ]
   }
 }

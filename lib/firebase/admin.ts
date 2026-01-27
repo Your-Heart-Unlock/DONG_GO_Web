@@ -9,17 +9,17 @@ let adminStorage: admin.storage.Storage | undefined;
 try {
   if (!admin.apps.length) {
     // Vercel 환경변수 또는 로컬 service account key 사용
-    const serviceAccount = process.env.FIREBASE_ADMIN_PRIVATE_KEY
-      ? {
-          projectId: process.env.FIREBASE_ADMIN_PROJECT_ID,
-          clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-          privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        }
-      : undefined;
+    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const projectId = process.env.FIREBASE_ADMIN_PROJECT_ID;
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
 
-    if (serviceAccount && serviceAccount.projectId && serviceAccount.clientEmail && serviceAccount.privateKey) {
+    if (privateKey && projectId && clientEmail) {
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount as admin.ServiceAccount),
+        credential: admin.credential.cert({
+          projectId,
+          clientEmail,
+          privateKey,
+        } as admin.ServiceAccount),
         storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
       });
 
@@ -27,7 +27,7 @@ try {
       adminAuth = admin.auth();
       adminStorage = admin.storage();
     } else {
-      console.warn('Firebase Admin SDK: Service account credentials not found, using placeholder');
+      console.warn('Firebase Admin SDK: Service account credentials not found');
     }
   } else {
     adminDb = admin.firestore();

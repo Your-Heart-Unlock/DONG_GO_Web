@@ -21,7 +21,12 @@ export function useNaverMaps() {
     // 이미 스크립트가 추가되어 있으면 로드 완료 대기
     const existingScript = document.getElementById(SCRIPT_ID);
     if (existingScript) {
-      existingScript.addEventListener('load', () => setIsLoaded(true));
+      // 스크립트가 이미 로드 완료된 경우 (load 이벤트가 이미 발생한 후)
+      if ((existingScript as HTMLScriptElement).dataset.loaded === 'true') {
+        setIsLoaded(true);
+      } else {
+        existingScript.addEventListener('load', () => setIsLoaded(true));
+      }
       return;
     }
 
@@ -40,6 +45,7 @@ export function useNaverMaps() {
     script.defer = true;
 
     script.onload = () => {
+      script.dataset.loaded = 'true';
       setIsLoaded(true);
     };
 
