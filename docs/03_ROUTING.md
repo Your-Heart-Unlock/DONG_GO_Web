@@ -19,8 +19,7 @@
 |------|------|------|
 | `/` | Map Home | 지도 + 검색 + 마커 + 바텀시트 |
 | `/places/[placeId]` | Place Detail | 상세 페이지 (권한에 따라 내용 차등) |
-| `/add` | Add Place | 네이버 검색 기반 장소 추가 |
-| `/me` | My Activity | 내 리뷰/방문 기록 관리 |
+| `/add` | Add Place | 카카오 검색 기반 장소 추가 (member/owner만) |
 | `/login` | Login | Google 로그인 |
 | `/onboarding/nickname` | Nickname Gate | 닉네임 강제 설정 |
 
