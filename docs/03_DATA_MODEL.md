@@ -16,6 +16,16 @@
 - createdAt
 - source: naver_import | user_added
 - status: active | hidden | deleted
+- cellId (string, 지도 그리드 인덱스 — 14_MAP_MARKER_STRATEGY 참고)
+
+## place_markers/{placeId}
+(지도 렌더링용 경량 컬렉션 — 14_MAP_MARKER_STRATEGY 참고)
+- lat, lng
+- cellId
+- name
+- category
+- regionKey (optional)
+- updatedAt
 
 ## visits/{visitId}
 - placeId

@@ -39,7 +39,7 @@ MVP에서 권한을 깔끔하게 하려면 아래 구조가 유리하다.
 
 ---
 
-## 3) Firestore Rules (초안)
+## 3) Firestore Rules
 
 아래는 “app router + 클라이언트 SDK” 기준으로 동작 가능한 형태의 규칙 골격이다.
 실제 적용 전, 컬렉션/문서 경로를 코드와 반드시 일치시키기.
@@ -72,10 +72,6 @@ service cloud.firestore {
       return role() == "member" || role() == "owner";
     }
 
-    function isPendingOrGuest() {
-      return role() == "pending" || role() == "guest";
-    }
-
     function isSelf(uid) {
       return signedIn() && request.auth.uid == uid;
     }
@@ -88,29 +84,33 @@ service cloud.firestore {
 
     // ---------- users ----------
     match /users/{uid} {
-      allow create: if signedIn() && isSelf(uid)
+      // 본인 문서 생성(온보딩) 허용
+      allow create: if isSelf(uid)
         && request.resource.data.nickname is string
-        && request.resource.data.nickname.size() >= 2
-        && request.resource.data.nickname.size() <= 20
-        && request.resource.data.role in ["pending", "member", "owner"];
+        && request.resource.data.role == "pending";
 
-      // 본인만 read, owner는 운영상 전체 read 가능
+      // 본인 read 가능, owner는 운영상 read 가능
       allow read: if isSelf(uid) || isOwner();
 
-      // 본인은 nickname 등 일부만 업데이트 허용 (role은 owner만)
+      // 본인은 nickname 등만 수정 가능(역할(role)은 수정 금지)
       allow update: if isSelf(uid)
-        && !( "role" in request.resource.data.diff(resource.data).changedKeys() );
-      allow update: if isOwner(); // owner는 role 변경 가능(운영)
+        && !( "role" in request.resource.data.diff(resource.data).changedKeys())
+        && (request.resource.data.nickname == "" 
+        	|| (request.resource.data.nickname.size() >= 2 
+        		&& request.resource.data.nickname.size() <= 20));
 
-      allow delete: if isOwner(); // MVP: 필요 시에만
+      // owner는 운영을 위해 사용자 문서 수정(승인/역할 변경) 가능
+      allow update: if isOwner();
+
+      allow delete: if isOwner();
     }
 
     // ---------- places (public-ish) ----------
     match /places/{placeId} {
-      // read: 누구나 (guest/pending 포함) 가능
+      // place 기본 정보는 guest/pending 포함 read 허용
       allow read: if true;
 
-      // create: member/owner만. placeId는 docId로 관리 권장(중복 방지)
+      // create: member/owner만. docId == placeId로 고정(중복 방지)
       allow create: if isMemberOrOwner()
         && request.resource.data.placeId == placeId
         && request.resource.data.name is string
@@ -119,34 +119,35 @@ service cloud.firestore {
         && request.resource.data.source in ["naver_import", "user_added"]
         && request.resource.data.status in ["active", "hidden", "deleted"];
 
-      // update/delete: owner만 (멤버는 요청(requests)로만)
+      // place 수정/삭제는 owner만 (멤버는 요청(requests)만)
       allow update, delete: if isOwner();
     }
 
-    // ---------- place stats (readable for pending/guest) ----------
-    // Option A: places/{placeId}/stats (document) 형태면 아래처럼
+    // ---------- place stats (public readable) ----------
     match /places/{placeId}/stats/{docId} {
-      allow read: if true;
-      allow write: if isOwner(); // 또는 서버(Cloud Functions)만
+      allow read: if true;          // guest/pending도 OK
+      allow write: if isOwner();    // 또는 서버만(Cloud Functions/Admin SDK)
+    }
+
+    // ---------- stats (top-level, public readable) ----------
+    match /stats/{placeId} {
+      allow read: if true;                // guest/pending도 통계 조회 가능
+      allow write: if isMemberOrOwner();  // 리뷰 CRUD 시 stats 자동 업데이트
     }
 
     // ---------- reviews (sensitive) ----------
     match /reviews/{reviewId} {
-      // read: member/owner만
+      // pending/guest 차단
       allow read: if isMemberOrOwner();
 
-      // create: member/owner만, 본인 uid만 허용
       allow create: if isMemberOrOwner()
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.placeId is string
         && request.resource.data.ratingTier in ["S","A","B","C","F"];
 
-      // update/delete: 작성자 본인만 (owner도 관리 필요하면 owner 허용)
+      // 작성자만 수정/삭제
       allow update, delete: if isMemberOrOwner()
         && resource.data.uid == request.auth.uid;
-
-      // 운영 편의상 owner가 수정/삭제 가능하게 하려면:
-      // allow update, delete: if isOwner() || (isMemberOrOwner() && resource.data.uid == request.auth.uid);
     }
 
     // ---------- visits (sensitive) ----------
@@ -163,21 +164,17 @@ service cloud.firestore {
 
     // ---------- requests ----------
     match /requests/{requestId} {
-      // read:
-      // - member/owner는 읽기 가능(본인 요청 확인)
-      // - pending/guest는 기본적으로 불가
+      // member/owner만 (pending/guest 차단)
       allow read: if isMemberOrOwner();
 
-      // create: member/owner
+      // member가 생성 가능 (place_edit/place_delete)
       allow create: if isMemberOrOwner()
         && request.resource.data.requestedBy == request.auth.uid
         && request.resource.data.type in ["place_edit", "place_delete"]
         && request.resource.data.status == "open";
 
-      // update: owner만(approve/reject)
-      allow update: if isOwner();
-
-      allow delete: if isOwner(); // MVP: 필요 시에만
+      // 승인/거절은 owner만
+      allow update, delete: if isOwner();
     }
 
     // ---------- admin logs ----------
@@ -185,13 +182,14 @@ service cloud.firestore {
       allow read, write: if isOwner();
     }
 
-    // ---------- config (rating label mapping etc.) ----------
+    // ---------- config ----------
     match /config/{docId} {
-      allow read: if true;      // 라벨 매핑은 공개 가능(민감X)
+      allow read: if true;        // 라벨 매핑 공개 OK
       allow write: if isOwner();
     }
   }
 }
+
 ```
 
 ---

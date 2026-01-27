@@ -35,14 +35,18 @@ export interface Review {
   reviewId: string;
   placeId: string;
   uid: string;
+  nickname?: string; // 표시용 (조회 시 join)
   ratingTier: RatingTier;
   oneLineReview?: string;
   tags?: string[];
+  visitedAt?: Date;
+  companions?: string;
+  revisitIntent?: boolean;
   createdAt: Date;
   updatedAt?: Date;
 }
 
-// Visit Types
+// Visit Types (deprecated: 방문 정보는 Review에 통합됨)
 export interface Visit {
   visitId: string;
   placeId: string;
@@ -56,7 +60,6 @@ export interface Visit {
 // Stats Types
 export interface PlaceStats {
   reviewCount: number;
-  visitCount: number;
   tierCounts: {
     S: number;
     A: number;

@@ -5,8 +5,12 @@
       "Bash(npm install)",
       "Bash(npm run type-check:*)",
       "Bash(npm run build:*)",
-      "Bash(npx eslint:*)",
       "Bash(npm install:*)"
+      "Bash(npx eslint:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(ls:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

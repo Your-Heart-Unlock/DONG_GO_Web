@@ -4,7 +4,9 @@ import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPlaceById } from '@/lib/firebase/places';
-import { Place } from '@/types';
+import { getPlaceStats } from '@/lib/firebase/reviews';
+import { Place, PlaceStats, RatingTier } from '@/types';
+import ReviewList from '@/components/reviews/ReviewList';
 
 interface PlaceDetailPageProps {
   params: Promise<{ placeId: string }>;
@@ -14,6 +16,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
   const { placeId } = use(params);
   const { user, loading: authLoading } = useAuth();
   const [place, setPlace] = useState<Place | null>(null);
+  const [stats, setStats] = useState<PlaceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -23,11 +26,15 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
     async function fetchPlace() {
       setLoading(true);
       try {
-        const data = await getPlaceById(placeId);
+        const [data, statsData] = await Promise.all([
+          getPlaceById(placeId),
+          getPlaceStats(placeId),
+        ]);
         if (!data) {
           setError('장소를 찾을 수 없습니다.');
         } else {
           setPlace(data);
+          setStats(statsData);
         }
       } catch (err) {
         setError('장소를 불러오는데 실패했습니다.');
@@ -39,6 +46,13 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
 
     fetchPlace();
   }, [placeId]);
+
+  // 가장 많은 티어 계산
+  function getTopTier(tierCounts: PlaceStats['tierCounts']): RatingTier | '-' {
+    const entries = Object.entries(tierCounts) as [RatingTier, number][];
+    const max = entries.reduce((a, b) => (b[1] > a[1] ? b : a), entries[0]);
+    return max[1] > 0 ? max[0] : '-';
+  }
 
   if (loading || authLoading) {
     return (
@@ -116,23 +130,18 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
           {/* 통계 섹션 (모든 사용자에게 표시) */}
           <div className="border-t border-gray-100 bg-gray-50 px-6 py-4">
             <h3 className="text-sm font-medium text-gray-700 mb-3">통계</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
+            <div className="grid grid-cols-2 gap-4 text-center">
               <div>
-                <p className="text-2xl font-bold text-gray-900">-</p>
+                <p className="text-2xl font-bold text-gray-900">{stats?.reviewCount ?? '-'}</p>
                 <p className="text-xs text-gray-500">리뷰</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">-</p>
-                <p className="text-xs text-gray-500">방문</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold text-gray-900">-</p>
-                <p className="text-xs text-gray-500">평균 등급</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats ? getTopTier(stats.tierCounts) : '-'}
+                </p>
+                <p className="text-xs text-gray-500">최다 등급</p>
               </div>
             </div>
-            <p className="text-xs text-gray-400 mt-2 text-center">
-              통계 기능은 추후 구현 예정
-            </p>
           </div>
         </div>
 
@@ -140,38 +149,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
         {isMemberOrOwner ? (
           <>
             {/* 리뷰 섹션 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">리뷰</h3>
-                <button
-                  disabled
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg opacity-50 cursor-not-allowed"
-                >
-                  리뷰 작성
-                </button>
-              </div>
-              <div className="text-center py-8 text-gray-500">
-                <p>아직 리뷰가 없습니다.</p>
-                <p className="text-sm mt-1">리뷰 기능은 추후 구현 예정입니다.</p>
-              </div>
-            </div>
-
-            {/* 방문 기록 섹션 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">방문 기록</h3>
-                <button
-                  disabled
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg opacity-50 cursor-not-allowed"
-                >
-                  방문 기록 추가
-                </button>
-              </div>
-              <div className="text-center py-8 text-gray-500">
-                <p>아직 방문 기록이 없습니다.</p>
-                <p className="text-sm mt-1">방문 기록 기능은 추후 구현 예정입니다.</p>
-              </div>
-            </div>
+            <ReviewList placeId={placeId} />
 
             {/* 사진 갤러리 섹션 */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -202,7 +180,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
                   멤버 전용 콘텐츠
                 </h3>
                 <p className="mt-1 text-sm text-yellow-700">
-                  리뷰, 방문 기록, 사진은 승인된 멤버만 볼 수 있습니다.
+                  리뷰, 사진은 승인된 멤버만 볼 수 있습니다.
                 </p>
                 {user?.role === 'pending' && (
                   <p className="mt-2 text-sm text-yellow-600">

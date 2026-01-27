@@ -13,11 +13,11 @@
 ---
 
 ## B. Firebase 기본 세팅 (0.5d)
-- [ ] Firebase 프로젝트 생성 (사용자가 Firebase Console에서 수동 생성 필요)
-- [ ] Firestore/Storage/Auth 활성화 (사용자가 Firebase Console에서 수동 활성화 필요)
-- [ ] Auth: Google Sign-In 설정 (사용자가 Firebase Console에서 수동 설정 필요)
+- [X] Firebase 프로젝트 생성 (사용자가 Firebase Console에서 수동 생성 필요)
+- [X] Firestore/Storage/Auth 활성화 (사용자가 Firebase Console에서 수동 활성화 필요)
+- [X] Auth: Google Sign-In 설정 (사용자가 Firebase Console에서 수동 설정 필요)
 - [x] Firebase SDK 코드 준비 (client.ts, admin.ts, auth.ts, user.ts)
-- [ ] Firestore 컬렉션 초기 설계 반영 (03 문서 기준) - Rules 배포 시
+- [X] Firestore 컬렉션 초기 설계 반영 (03 문서 기준) - Rules 배포 시
 - [ ] `config/ratings` 문서 생성(라벨 매핑 초기값) - Admin Import 구현 시
 
 ---
@@ -35,8 +35,8 @@
 ---
 
 ## D. 권한/보안 규칙 적용 (0.5d)
-- [ ] Firestore Rules 적용 (07 문서 초안 기반)
-- [ ] Storage Rules 적용(로그인 사용자만 + owner/member만 업로드)
+- [X] Firestore Rules 적용 (07 문서 초안 기반)
+- [X] Storage Rules 적용(로그인 사용자만 + owner/member만 업로드)
 - [ ] pending/guest가 reviews/visits를 못 읽는지 테스트
 - [ ] member가 타인 리뷰 수정 못 하는지 테스트
 
