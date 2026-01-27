@@ -58,6 +58,7 @@
 | `REF_USER_EXPERIENCE.md` | UX 정책 (A/B/C 정책, 라이트 모드 등) |
 | `REF_ADMIN_SPEC.md` | 관리자 기능 상세 스펙 |
 | `REF_MAP_STRATEGY.md` | 지도 마커 로딩, 클러스터링 전략 |
+| `REF_DESIGN_SYSTEM.md` | 디자인 시스템, 색상, 마커 디자인 |
 
 ---
 
@@ -88,6 +89,7 @@ docs/
 ├── 📄 README.md (본 파일)
 ├── 📄 CHECKLIST.md (메인 체크리스트)
 ├── 📄 PROGRESS.md (작업 로그)
+├── 📄 FEATURE_IDEAS.md (확장 아이디어)
 │
 ├── 🏗️ 기초 문서
 │   ├── 00_OVERVIEW.md
@@ -115,7 +117,8 @@ docs/
     ├── REF_RATING_SYSTEM.md
     ├── REF_USER_EXPERIENCE.md
     ├── REF_ADMIN_SPEC.md
-    └── REF_MAP_STRATEGY.md
+    ├── REF_MAP_STRATEGY.md
+    └── REF_DESIGN_SYSTEM.md
 ```
 
 ---
