@@ -41,7 +41,9 @@ export default function FilterPanel({
   onFilterChange,
 }: FilterPanelProps) {
   const [query, setQuery] = useState<SearchQuery>({});
-  const [counts, setCounts] = useState<any>({});
+  // 필터 카운트 (추후 구현 시 사용)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [counts, setCounts] = useState<{ [key: string]: number; tiers?: { [key: string]: number } }>({});
 
   useEffect(() => {
     if (isOpen) {
@@ -197,9 +199,10 @@ export default function FilterPanel({
               <select
                 className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={query.sortBy || 'recent'}
-                onChange={(e) =>
-                  setQuery({ ...query, sortBy: e.target.value as any })
-                }
+                onChange={(e) => {
+                  const value = e.target.value as 'recent' | 'rating' | 'reviews' | 'wishes';
+                  setQuery({ ...query, sortBy: value });
+                }}
               >
                 <option value="recent">최신순</option>
                 <option value="rating">평점순</option>

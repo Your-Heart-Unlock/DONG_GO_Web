@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
 
     // 1. Query 파라미터 파싱
+    const sortByParam = searchParams.get('sortBy');
     const query: SearchQuery = {
       keyword: searchParams.get('keyword') || undefined,
       categories: searchParams.get('categories')?.split(',').filter(Boolean),
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
       minReviews: searchParams.get('minReviews') ? parseInt(searchParams.get('minReviews')!) : undefined,
       wishOnly: searchParams.get('wishOnly') === 'true',
       unvisitedOnly: searchParams.get('unvisitedOnly') === 'true',
-      sortBy: (searchParams.get('sortBy') as any) || 'recent',
+      sortBy: (sortByParam === 'recent' || sortByParam === 'rating' || sortByParam === 'reviews' || sortByParam === 'wishes') ? sortByParam : 'recent',
       sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
     };
 
@@ -50,12 +51,25 @@ export async function GET(request: NextRequest) {
 
     // 3. 쿼리 실행
     const snapshot = await placesQuery.get();
-    let places: (Place & { placeId: string })[] = snapshot.docs.map(doc => ({
-      placeId: doc.id,
-      ...(doc.data() as any),
-      createdAt: doc.data().createdAt?.toDate?.() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate?.() || undefined,
-    }));
+    let places: (Place & { placeId: string })[] = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        placeId: doc.id,
+        name: data.name,
+        address: data.address,
+        lat: data.lat,
+        lng: data.lng,
+        category: data.category,
+        categoryCode: data.categoryCode,
+        source: data.source,
+        status: data.status,
+        mapProvider: data.mapProvider,
+        cellId: data.cellId,
+        createdBy: data.createdBy,
+        createdAt: data.createdAt?.toDate?.() || new Date(),
+        updatedAt: data.updatedAt?.toDate?.() || undefined,
+      };
+    });
 
     console.log('[Filter API] Initial places count:', places.length);
 
