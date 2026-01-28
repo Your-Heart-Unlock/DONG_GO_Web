@@ -92,21 +92,46 @@ export async function GET(request: NextRequest) {
       const placeStatsMap = new Map<string, PlaceStats>();
       statsSnapshot.forEach((doc, idx) => {
         if (doc.exists) {
-          placeStatsMap.set(placeIds[idx], doc.data() as PlaceStats);
+          const data = doc.data();
+          // Defensive: ensure required fields exist with defaults
+          placeStatsMap.set(placeIds[idx], {
+            reviewCount: data?.reviewCount ?? 0,
+            tierCounts: data?.tierCounts ?? { S: 0, A: 0, B: 0, C: 0, F: 0 },
+            topTags: data?.topTags ?? [],
+          });
         }
       });
 
+      console.log('[Filter API] Stats found for', placeStatsMap.size, 'of', placeIds.length, 'places');
+
       places = places.filter(place => {
         const stats = placeStatsMap.get(place.placeId);
-        if (!stats || stats.reviewCount === 0) return false;
+
+        // No stats document = no reviews = doesn't match tier filter
+        if (!stats) {
+          console.log(`[Filter API] No stats for place: ${place.placeId} (${place.name})`);
+          return false;
+        }
+
+        const reviewCount = stats.reviewCount ?? 0;
+        if (reviewCount === 0) {
+          console.log(`[Filter API] Zero reviews for place: ${place.placeId} (${place.name})`);
+          return false;
+        }
 
         // 평균 등급 계산
-        const tierWeights = { S: 5, A: 4, B: 3, C: 2, F: 1 };
-        const totalWeight = Object.entries(stats.tierCounts).reduce(
-          (sum, [tier, count]) => sum + tierWeights[tier as RatingTier] * count,
+        const tierWeights: Record<string, number> = { S: 5, A: 4, B: 3, C: 2, F: 1 };
+        const tierCounts = stats.tierCounts ?? { S: 0, A: 0, B: 0, C: 0, F: 0 };
+
+        const totalWeight = Object.entries(tierCounts).reduce(
+          (sum, [tier, count]) => {
+            const weight = tierWeights[tier] ?? 0;
+            const tierCount = (count as number) ?? 0;
+            return sum + weight * tierCount;
+          },
           0
         );
-        const avgWeight = totalWeight / stats.reviewCount;
+        const avgWeight = totalWeight / reviewCount;
 
         // 평균 등급을 tier로 변환
         let avgTier: RatingTier = 'C';
@@ -116,7 +141,10 @@ export async function GET(request: NextRequest) {
         else if (avgWeight >= 1.5) avgTier = 'C';
         else avgTier = 'F';
 
-        return query.tiers!.includes(avgTier);
+        const matches = query.tiers!.includes(avgTier);
+        console.log(`[Filter API] Place ${place.name}: tierCounts=${JSON.stringify(tierCounts)}, reviewCount=${reviewCount}, avgWeight=${avgWeight.toFixed(2)}, avgTier=${avgTier}, matches=${matches}`);
+
+        return matches;
       });
       console.log('[Filter API] After tier filter:', places.length);
     }
