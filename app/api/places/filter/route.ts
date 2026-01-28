@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     if (query.tiers && query.tiers.length > 0) {
       const placeIds = places.map(p => p.placeId);
       const statsPromises = placeIds.map(id =>
-        adminDb.collection('stats').doc(id).get()
+        adminDb!.collection('stats').doc(id).get()
       );
       const statsSnapshot = await Promise.all(statsPromises);
 
@@ -143,7 +143,7 @@ export async function GET(request: NextRequest) {
     if (query.minReviews) {
       const placeIds = places.map(p => p.placeId);
       const statsPromises = placeIds.map(id =>
-        adminDb.collection('stats').doc(id).get()
+        adminDb!.collection('stats').doc(id).get()
       );
       const statsSnapshot = await Promise.all(statsPromises);
 
@@ -165,7 +165,7 @@ export async function GET(request: NextRequest) {
     if (uid) {
       // wishOnly
       if (query.wishOnly) {
-        const wishSnapshot = await adminDb
+        const wishSnapshot = await adminDb!
           .collection('wishes')
           .where('uid', '==', uid)
           .get();
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
 
       // unvisitedOnly
       if (query.unvisitedOnly) {
-        const reviewSnapshot = await adminDb
+        const reviewSnapshot = await adminDb!
           .collection('reviews')
           .where('uid', '==', uid)
           .get();
