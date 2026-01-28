@@ -43,7 +43,10 @@ export default function FilterPanel({
   const [query, setQuery] = useState<SearchQuery>({});
   // 필터 카운트 (추후 구현 시 사용)
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [counts, setCounts] = useState<{ [key: string]: number; tiers?: { [key: string]: number } }>({});
+  const [counts, setCounts] = useState<{
+    categories?: { [key: string]: number };
+    tiers?: { [key: string]: number };
+  }>({});
 
   useEffect(() => {
     if (isOpen) {
@@ -71,7 +74,7 @@ export default function FilterPanel({
       query.minReviews ? 1 : 0,
       query.wishOnly ? 1 : 0,
       query.unvisitedOnly ? 1 : 0,
-    ].reduce((sum, count) => sum + (count || 0), 0);
+    ].reduce<number>((sum, count) => sum + (count || 0), 0);
 
     // 패널을 먼저 닫아서 빠르게 느껴지도록
     onClose();
@@ -125,7 +128,7 @@ export default function FilterPanel({
               {CATEGORIES.map(cat => (
                 <Checkbox
                   key={cat}
-                  label={`${cat}${counts[cat] ? ` (${counts[cat]})` : ''}`}
+                  label={`${cat}${counts.categories?.[cat] ? ` (${counts.categories[cat]})` : ''}`}
                   checked={query.categories?.includes(cat) || false}
                   onChange={(checked) => {
                     const categories = checked
