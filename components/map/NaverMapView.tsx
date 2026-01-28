@@ -104,12 +104,24 @@ export default function NaverMapView({
     });
   }, [isLoaded, center.lat, center.lng, zoom, updateMarkerVisibility]);
 
-  // 마커 렌더링 (증분 추가 — 기존 마커 유지, 새 마커만 생성)
+  // 마커 렌더링 (증분 추가 + 불필요한 마커 제거)
   useEffect(() => {
     if (!mapInstanceRef.current || !isLoaded) return;
 
     const map = mapInstanceRef.current;
+    const currentPlaceIds = new Set(places.map(p => p.placeId));
 
+    // 1. places에 없는 마커 제거 (필터링 또는 장소 삭제 시)
+    const markersToRemove: string[] = [];
+    markerMapRef.current.forEach((marker, placeId) => {
+      if (!currentPlaceIds.has(placeId)) {
+        marker.setMap(null);
+        markersToRemove.push(placeId);
+      }
+    });
+    markersToRemove.forEach(id => markerMapRef.current.delete(id));
+
+    // 2. 새로운 장소의 마커 추가
     places.forEach((place) => {
       // 이미 생성된 마커는 스킵
       if (markerMapRef.current.has(place.placeId)) return;
@@ -128,7 +140,7 @@ export default function NaverMapView({
       markerMapRef.current.set(place.placeId, marker);
     });
 
-    // 새 마커 추가 후 가시성 갱신
+    // 3. 마커 가시성 갱신
     updateMarkerVisibility();
   }, [places, isLoaded, updateMarkerVisibility]);
 

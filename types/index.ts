@@ -155,3 +155,34 @@ export interface RatingLabel {
   labelShort: string; // 예: "전파각"
   labelLong: string; // 예: "진짜 너무 좋아서 남들에게 추천하고 싶은 곳"
 }
+
+// Search & Filter Types
+export interface SearchQuery {
+  // 키워드
+  keyword?: string; // 장소 이름, 주소 검색
+
+  // 카테고리
+  categories?: string[]; // ["한식", "일식", "카페"]
+
+  // 등급
+  tiers?: RatingTier[]; // ["S", "A"]
+
+  // 지역
+  regions?: string[]; // ["강남", "홍대", "성수"] - 주소에서 추출
+
+  // 리뷰 수
+  minReviews?: number; // 예: 3개 이상만
+
+  // 사용자별 필터
+  wishOnly?: boolean; // 내가 가고 싶어요 한 곳만
+  unvisitedOnly?: boolean; // 내가 아직 리뷰 안 쓴 곳만
+
+  // 정렬
+  sortBy?: 'recent' | 'rating' | 'reviews' | 'wishes';
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface FilterState extends SearchQuery {
+  isActive: boolean; // 필터가 적용 중인지
+  activeCount: number; // 활성화된 필터 개수
+}

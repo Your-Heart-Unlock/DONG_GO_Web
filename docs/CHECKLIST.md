@@ -32,7 +32,7 @@
    - 마이그레이션 API: `/api/admin/migrate-cellid`
    - 마커 클러스터링 (장소 300개 초과 시 추후 추가)
 
-4. [ ] **스마트 필터** (N섹션) - 2d
+4. [x] **스마트 필터** (N섹션) - 2d
    - 카테고리/등급/지역 필터링
    - 미방문/위시리스트 필터
    - 지도 마커 연동
@@ -275,29 +275,32 @@
 ## L. 외부 평점 데이터 크롤링 (MVP 이후) → 상세: `IMPL-L_CRAWLING.md`
 - [ ] 네이버 지도 평점/리뷰 개수 크롤링
 - [ ] 카카오 지도 평점/리뷰 개수 크롤링
-- [N. 스마트 검색 & 필터 (2d) - **신규**
-- [ ] SearchQuery 인터페이스 정의
-  - [ ] keyword (이름/주소)
-  - [ ] categories (다중 선택)
-  - [ ] tiers (S/A/B/C/F)
-  - [ ] regions (주소에서 추출)
-  - [ ] minReviews
-  - [ ] wishOnly / unvisitedOnly
-  - [ ] sortBy (recent/rating/reviews/wishes)
-- [ ] API Route 구현
-  - [ ] `/api/search/places` - 복합 필터 쿼리
-  - [ ] Firestore 복합 인덱스 생성
-- [ ] UI 컴포넌트
-  - [ ] FilterPanel.tsx (슬라이드 오버)
-  - [ ] 카테고리 체크박스
-  - [ ] 등급 Chip 선택
-  - [ ] 지역 Select
-  - [ ] 미방문/위시리스트 토글
-  - [ ] 필터 적용/초기화 버튼
-- [ ] 지도 연동
-  - [ ] 필터 변경 시 마커 업데이트
-  - [ ] URL 쿼리스트링에 필터 상태 저장
-- [ ] 필터 카운트 표시 (각 옵션별 개수)
+
+---
+
+## N. 스마트 검색 & 필터 (2d) - **완료**
+- [x] SearchQuery 인터페이스 정의
+  - [x] keyword (이름/주소)
+  - [x] categories (다중 선택)
+  - [x] tiers (S/A/B/C/F)
+  - [x] regions (주소에서 추출)
+  - [x] minReviews
+  - [x] wishOnly / unvisitedOnly
+  - [x] sortBy (recent/rating/reviews/wishes)
+- [x] API Route 구현
+  - [x] `/api/places/filter` - 복합 필터 쿼리
+  - [x] Firestore 복합 인덱스 생성
+- [x] UI 컴포넌트
+  - [x] FilterPanel.tsx (슬라이드 오버)
+  - [x] 카테고리 체크박스
+  - [x] 등급 Chip 선택
+  - [x] 지역 Select
+  - [x] 미방문/위시리스트 토글
+  - [x] 필터 적용/초기화 버튼
+- [x] 지도 연동
+  - [x] 필터 변경 시 마커 업데이트
+  - [ ] URL 쿼리스트링에 필터 상태 저장 (추후 개선)
+- [ ] 필터 카운트 표시 (각 옵션별 개수) (추후 개선)
 
 **상세**: `IMPL-N_SMART_FILTER.md`
 

@@ -9,20 +9,26 @@ import NaverMapView, { MapBounds } from '@/components/map/NaverMapView';
 import PlaceBottomSheet from '@/components/map/PlaceBottomSheet';
 import SearchBar from '@/components/map/SearchBar';
 import { getCellIdsForBounds } from '@/lib/utils/cellId';
-import { Place } from '@/types';
+import { Place, FilterState } from '@/types';
 
 export default function HomePage() {
   const { firebaseUser, user, loading } = useAuth();
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
+  const [filterState, setFilterState] = useState<FilterState>({
+    isActive: false,
+    activeCount: 0,
+  });
+  const [currentBounds, setCurrentBounds] = useState<MapBounds | null>(null);
 
   // 클라이언트 캐시: 이미 로드된 placeId는 재요청하지 않음
   const loadedPlaceIdsRef = useRef<Set<string>>(new Set());
   // 이미 쿼리한 cellId 추적
   const loadedCellIdsRef = useRef<Set<string>>(new Set());
 
-  const handleBoundsChange = useCallback(async (bounds: MapBounds) => {
+  // Bounds 기반 장소 로딩 함수 (재사용 가능)
+  const loadPlacesByBounds = useCallback(async (bounds: MapBounds) => {
     const cellIds = getCellIdsForBounds(bounds);
 
     // cellIds가 null이면 줌이 너무 낮아서 쿼리 불가
@@ -56,6 +62,16 @@ export default function HomePage() {
     }
   }, []);
 
+  const handleBoundsChange = useCallback(async (bounds: MapBounds) => {
+    // 현재 bounds 저장
+    setCurrentBounds(bounds);
+
+    // 필터가 활성화된 상태면 bounds 기반 로딩 스킵
+    if (filterState.isActive) return;
+
+    await loadPlacesByBounds(bounds);
+  }, [filterState.isActive, loadPlacesByBounds]);
+
   const handleLogout = async () => {
     try {
       await signOut();
@@ -69,6 +85,92 @@ export default function HomePage() {
     console.log('Search query:', query);
     alert('검색 기능은 추후 구현 예정입니다.');
   };
+
+  const handleFilterChange = useCallback(async (newFilterState: FilterState) => {
+    setFilterState(newFilterState);
+
+    // 필터가 활성화되지 않은 경우 초기화 후 현재 bounds 재로드
+    if (!newFilterState.isActive) {
+      // 캐시와 장소 목록 초기화
+      loadedPlaceIdsRef.current.clear();
+      loadedCellIdsRef.current.clear();
+      setPlaces([]);
+
+      // 현재 bounds가 있으면 즉시 재로드
+      if (currentBounds) {
+        console.log('[HomePage] Filter disabled, reloading current bounds');
+        await loadPlacesByBounds(currentBounds);
+      }
+      return;
+    }
+
+    // 필터 적용 전 기존 장소 제거 및 로딩 시작 (마커도 함께 제거됨)
+    setPlaces([]);
+    loadedPlaceIdsRef.current.clear();
+    loadedCellIdsRef.current.clear();
+    setLoadingPlaces(true);
+
+    try {
+      const queryParams = new URLSearchParams();
+
+      if (newFilterState.categories?.length) {
+        queryParams.set('categories', newFilterState.categories.join(','));
+      }
+      if (newFilterState.tiers?.length) {
+        queryParams.set('tiers', newFilterState.tiers.join(','));
+      }
+      if (newFilterState.regions?.length) {
+        queryParams.set('regions', newFilterState.regions.join(','));
+      }
+      if (newFilterState.minReviews) {
+        queryParams.set('minReviews', newFilterState.minReviews.toString());
+      }
+      if (newFilterState.wishOnly) {
+        queryParams.set('wishOnly', 'true');
+      }
+      if (newFilterState.unvisitedOnly) {
+        queryParams.set('unvisitedOnly', 'true');
+      }
+      if (newFilterState.sortBy) {
+        queryParams.set('sortBy', newFilterState.sortBy);
+      }
+      if (newFilterState.sortOrder) {
+        queryParams.set('sortOrder', newFilterState.sortOrder);
+      }
+      if (user?.uid) {
+        queryParams.set('uid', user.uid);
+      }
+
+      const url = `/api/places/filter?${queryParams.toString()}`;
+      console.log('[HomePage] Filter API URL:', url);
+
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error('[HomePage] Filter API error:', errorData);
+        throw new Error('필터링 실패');
+      }
+
+      const data = await response.json();
+      console.log('[HomePage] Filter API response:', {
+        totalCount: data.stats?.totalCount,
+        filteredCount: data.stats?.filteredCount,
+        placesLength: data.places?.length,
+      });
+
+      setPlaces(data.places || []);
+
+      // 필터 모드에서는 캐시 무효화
+      loadedPlaceIdsRef.current.clear();
+      loadedCellIdsRef.current.clear();
+    } catch (error) {
+      console.error('필터링 오류:', error);
+      alert('필터링 중 오류가 발생했습니다.');
+    } finally {
+      setLoadingPlaces(false);
+    }
+  }, [user?.uid, currentBounds, loadPlacesByBounds]);
 
   if (loading) {
     return (
@@ -124,7 +226,11 @@ export default function HomePage() {
 
       {/* Search Bar */}
       <div className="absolute top-20 left-4 right-4 z-20 max-w-md mx-auto">
-        <SearchBar onSearch={handleSearch} placeholder="맛집 검색..." />
+        <SearchBar
+          onSearch={handleSearch}
+          placeholder="맛집 검색..."
+          onFilterChange={handleFilterChange}
+        />
       </div>
 
       {/* Map */}
@@ -144,7 +250,16 @@ export default function HomePage() {
 
       {/* Status Info */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-600 z-10">
-        {loadingPlaces ? '로딩 중...' : `${places.length}개 장소 표시 중`}
+        {loadingPlaces ? '로딩 중...' : (
+          <>
+            {`${places.length}개 장소 표시 중`}
+            {filterState.isActive && (
+              <span className="ml-2 text-blue-600 font-semibold">
+                (필터 적용됨)
+              </span>
+            )}
+          </>
+        )}
       </div>
 
       {/* 장소 추가 버튼 (member/owner만) */}

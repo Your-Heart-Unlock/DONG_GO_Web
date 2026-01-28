@@ -151,36 +151,48 @@ export async function unhidePlace(placeId: string) {
 
 /**
  * cellId 배열로 장소 조회 (bounds 기반 지도 로딩)
- * Firestore 'in' 쿼리는 최대 30개까지 지원
+ * Firestore 'in' 쿼리는 최대 30개까지 지원하므로, 30개씩 나눠서 쿼리
  */
 export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
   if (!db || cellIds.length === 0) return [];
 
   try {
     const placesRef = collection(db, 'places');
-    const q = query(
-      placesRef,
-      where('status', '==', 'active'),
-      where('cellId', 'in', cellIds)
-    );
+    const BATCH_SIZE = 30; // Firestore 'in' 쿼리 최대 크기
+    const allPlaces: Place[] = [];
 
-    const snapshot = await getDocs(q);
-    return snapshot.docs.map((doc) => ({
-      placeId: doc.id,
-      name: doc.data().name,
-      address: doc.data().address,
-      lat: doc.data().lat,
-      lng: doc.data().lng,
-      category: doc.data().category,
-      categoryCode: doc.data().categoryCode,
-      source: doc.data().source,
-      status: doc.data().status,
-      mapProvider: doc.data().mapProvider,
-      cellId: doc.data().cellId,
-      createdBy: doc.data().createdBy,
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      updatedAt: doc.data().updatedAt?.toDate(),
-    }));
+    // cellIds를 30개씩 나눠서 쿼리
+    for (let i = 0; i < cellIds.length; i += BATCH_SIZE) {
+      const batch = cellIds.slice(i, i + BATCH_SIZE);
+
+      const q = query(
+        placesRef,
+        where('status', '==', 'active'),
+        where('cellId', 'in', batch)
+      );
+
+      const snapshot = await getDocs(q);
+      const places = snapshot.docs.map((doc) => ({
+        placeId: doc.id,
+        name: doc.data().name,
+        address: doc.data().address,
+        lat: doc.data().lat,
+        lng: doc.data().lng,
+        category: doc.data().category,
+        categoryCode: doc.data().categoryCode,
+        source: doc.data().source,
+        status: doc.data().status,
+        mapProvider: doc.data().mapProvider,
+        cellId: doc.data().cellId,
+        createdBy: doc.data().createdBy,
+        createdAt: doc.data().createdAt?.toDate() || new Date(),
+        updatedAt: doc.data().updatedAt?.toDate(),
+      }));
+
+      allPlaces.push(...places);
+    }
+
+    return allPlaces;
   } catch (error) {
     console.error('Failed to fetch places by cellIds:', error);
     return [];

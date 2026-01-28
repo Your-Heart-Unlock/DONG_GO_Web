@@ -18,7 +18,7 @@ export function computeCellId(lat: number, lng: number): string {
 
 /**
  * 지도 bounds를 커버하는 모든 cellId 반환
- * Firestore 'in' 쿼리 최대 30개 제한을 초과하면 null 반환 (줌 아웃 상태)
+ * Firestore 'in' 쿼리를 고려하되, 제한을 100개로 완화 (줌 레벨 9-10 지원)
  */
 export function getCellIdsForBounds(bounds: {
   sw: { lat: number; lng: number };
@@ -31,8 +31,8 @@ export function getCellIdsForBounds(bounds: {
 
   const cellCount = (maxCellLat - minCellLat + 1) * (maxCellLng - minCellLng + 1);
 
-  // Firestore 'in' 쿼리 최대 30개 제한
-  if (cellCount > 30) {
+  // 제한을 100개로 완화 (줌 레벨 9-10 지원)
+  if (cellCount > 100) {
     return null;
   }
 
