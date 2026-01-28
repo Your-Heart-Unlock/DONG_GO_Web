@@ -1,30 +1,59 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/lib/firebase/auth';
-import { getRecentPlaces } from '@/lib/firebase/places';
-import NaverMapView from '@/components/map/NaverMapView';
+import { getPlacesByCellIds } from '@/lib/firebase/places';
+import NaverMapView, { MapBounds } from '@/components/map/NaverMapView';
 import PlaceBottomSheet from '@/components/map/PlaceBottomSheet';
 import SearchBar from '@/components/map/SearchBar';
+import { getCellIdsForBounds } from '@/lib/utils/cellId';
 import { Place } from '@/types';
 
 export default function HomePage() {
   const { firebaseUser, user, loading } = useAuth();
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
-  const [loadingPlaces, setLoadingPlaces] = useState(true);
+  const [loadingPlaces, setLoadingPlaces] = useState(false);
 
-  // 장소 데이터 로드
-  useEffect(() => {
-    async function loadPlaces() {
-      setLoadingPlaces(true);
-      const data = await getRecentPlaces(100);
-      setPlaces(data);
+  // 클라이언트 캐시: 이미 로드된 placeId는 재요청하지 않음
+  const loadedPlaceIdsRef = useRef<Set<string>>(new Set());
+  // 이미 쿼리한 cellId 추적
+  const loadedCellIdsRef = useRef<Set<string>>(new Set());
+
+  const handleBoundsChange = useCallback(async (bounds: MapBounds) => {
+    const cellIds = getCellIdsForBounds(bounds);
+
+    // cellIds가 null이면 줌이 너무 낮아서 쿼리 불가
+    if (!cellIds) return;
+
+    // 이미 로드된 셀 제외
+    const newCellIds = cellIds.filter((id) => !loadedCellIdsRef.current.has(id));
+    if (newCellIds.length === 0) return;
+
+    setLoadingPlaces(true);
+
+    try {
+      const newPlaces = await getPlacesByCellIds(newCellIds);
+
+      // 로드된 셀 기록
+      newCellIds.forEach((id) => loadedCellIdsRef.current.add(id));
+
+      // 중복 제거 후 추가
+      const uniqueNewPlaces = newPlaces.filter(
+        (p) => !loadedPlaceIdsRef.current.has(p.placeId)
+      );
+
+      if (uniqueNewPlaces.length > 0) {
+        uniqueNewPlaces.forEach((p) => loadedPlaceIdsRef.current.add(p.placeId));
+        setPlaces((prev) => [...prev, ...uniqueNewPlaces]);
+      }
+    } catch (error) {
+      console.error('장소 로딩 실패:', error);
+    } finally {
       setLoadingPlaces(false);
     }
-    loadPlaces();
   }, []);
 
   const handleLogout = async () => {
@@ -49,39 +78,22 @@ export default function HomePage() {
     );
   }
 
-  // 비로그인 사용자 - 로그인 유도
-  if (!firebaseUser) {
-    return (
-      <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-50">
-        <div className="w-full max-w-md space-y-6 rounded-lg bg-white p-8 shadow-md">
-          <h1 className="text-3xl font-bold text-center text-gray-900">훈동이 맛집 지도</h1>
-          <p className="text-center text-gray-600">우리끼리 공유하는 맛집 큐레이션</p>
-          <Link
-            href="/login"
-            className="block w-full text-center rounded-lg bg-blue-600 px-6 py-3 text-white font-medium hover:bg-blue-700 transition-colors"
-          >
-            로그인하기
-          </Link>
-        </div>
-      </main>
-    );
-  }
-
-  // 로그인 사용자 - 지도 표시
   return (
     <main className="relative h-screen w-full flex flex-col">
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-bold text-gray-900">훈동이 맛집</h1>
-          <div className="hidden sm:flex items-center gap-2">
-            <span className="text-sm text-gray-600">{user?.nickname}</span>
-            {user?.role === 'pending' && (
-              <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
-                승인대기
-              </span>
-            )}
-          </div>
+          {firebaseUser && (
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-sm text-gray-600">{user?.nickname}</span>
+              {user?.role === 'pending' && (
+                <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
+                  승인대기
+                </span>
+              )}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {user?.role === 'owner' && (
@@ -92,12 +104,21 @@ export default function HomePage() {
               관리자
             </Link>
           )}
-          <button
-            onClick={handleLogout}
-            className="text-sm px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-          >
-            로그아웃
-          </button>
+          {firebaseUser ? (
+            <button
+              onClick={handleLogout}
+              className="text-sm px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              로그아웃
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            >
+              로그인
+            </Link>
+          )}
         </div>
       </header>
 
@@ -108,36 +129,11 @@ export default function HomePage() {
 
       {/* Map */}
       <div className="flex-1 relative">
-        {loadingPlaces ? (
-          <div className="flex h-full items-center justify-center bg-gray-100">
-            <p className="text-gray-500">장소 로딩 중...</p>
-          </div>
-        ) : (
-          <>
-            <NaverMapView
-              places={places}
-              onMarkerClick={setSelectedPlace}
-            />
-            {places.length === 0 && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div className="bg-white rounded-lg shadow-lg p-6 text-center pointer-events-auto">
-                  <p className="text-gray-600 font-medium mb-2">등록된 장소가 없습니다</p>
-                  <p className="text-sm text-gray-500 mb-3">
-                    관리자가 장소를 추가하면 지도에 표시됩니다.
-                  </p>
-                  {user?.role === 'owner' && (
-                    <a
-                      href="/admin/import"
-                      className="inline-block px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      장소 가져오기
-                    </a>
-                  )}
-                </div>
-              </div>
-            )}
-          </>
-        )}
+        <NaverMapView
+          places={places}
+          onMarkerClick={setSelectedPlace}
+          onBoundsChange={handleBoundsChange}
+        />
       </div>
 
       {/* Bottom Sheet */}
@@ -146,9 +142,9 @@ export default function HomePage() {
         onClose={() => setSelectedPlace(null)}
       />
 
-      {/* Status Info (Debug) */}
+      {/* Status Info */}
       <div className="absolute bottom-4 left-4 bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-600 z-10">
-        {places.length}개 장소 표시 중
+        {loadingPlaces ? '로딩 중...' : `${places.length}개 장소 표시 중`}
       </div>
 
       {/* 장소 추가 버튼 (member/owner만) */}

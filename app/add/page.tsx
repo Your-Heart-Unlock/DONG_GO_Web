@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { createPlace } from '@/lib/firebase/places';
-import { getPlaceById } from '@/lib/firebase/places';
+import { createPlace, getPlaceById } from '@/lib/firebase/places';
+import { MapProvider } from '@/types';
 
 interface SearchResult {
   placeId: string;
@@ -110,6 +110,7 @@ export default function AddPlacePage() {
     try {
       // 네이버 placeId 매칭 시도
       let finalPlaceId = place.placeId; // 카카오 ID를 기본값으로
+      let mapProvider: MapProvider = 'kakao';
       try {
         const resolveRes = await fetch(
           `/api/search/naver-resolve?name=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}`
@@ -117,6 +118,7 @@ export default function AddPlacePage() {
         const resolveData = await resolveRes.json();
         if (resolveData.naverPlaceId) {
           finalPlaceId = resolveData.naverPlaceId;
+          mapProvider = 'naver';
         }
       } catch {
         // 네이버 매칭 실패 시 카카오 ID 유지
@@ -148,6 +150,7 @@ export default function AddPlacePage() {
         category: place.category,
         source: 'user_added',
         status: 'active',
+        mapProvider,
         createdBy: firebaseUser.uid,
       });
 

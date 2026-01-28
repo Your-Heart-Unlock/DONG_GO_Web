@@ -10,9 +10,11 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
+  documentId,
 } from 'firebase/firestore';
 import { db } from './client';
 import { Place } from '@/types';
+import { computeCellId } from '@/lib/utils/cellId';
 
 /**
  * 최근 장소 N개 가져오기
@@ -43,6 +45,8 @@ export async function getRecentPlaces(limitCount: number = 50): Promise<Place[]>
       categoryCode: doc.data().categoryCode,
       source: doc.data().source,
       status: doc.data().status,
+      mapProvider: doc.data().mapProvider,
+      cellId: doc.data().cellId,
       createdBy: doc.data().createdBy,
       createdAt: doc.data().createdAt?.toDate() || new Date(),
       updatedAt: doc.data().updatedAt?.toDate(),
@@ -81,6 +85,8 @@ export async function getPlaceById(placeId: string): Promise<Place | null> {
       categoryCode: data.categoryCode,
       source: data.source,
       status: data.status,
+      mapProvider: data.mapProvider,
+      cellId: data.cellId,
       createdBy: data.createdBy,
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate(),
@@ -109,6 +115,7 @@ export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt'>)
 
   await setDoc(placeRef, {
     ...place,
+    cellId: computeCellId(place.lat, place.lng),
     createdAt: serverTimestamp(),
   });
 }
@@ -140,4 +147,42 @@ export async function hidePlace(placeId: string) {
  */
 export async function unhidePlace(placeId: string) {
   await updatePlace(placeId, { status: 'active' });
+}
+
+/**
+ * cellId 배열로 장소 조회 (bounds 기반 지도 로딩)
+ * Firestore 'in' 쿼리는 최대 30개까지 지원
+ */
+export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
+  if (!db || cellIds.length === 0) return [];
+
+  try {
+    const placesRef = collection(db, 'places');
+    const q = query(
+      placesRef,
+      where('status', '==', 'active'),
+      where('cellId', 'in', cellIds)
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map((doc) => ({
+      placeId: doc.id,
+      name: doc.data().name,
+      address: doc.data().address,
+      lat: doc.data().lat,
+      lng: doc.data().lng,
+      category: doc.data().category,
+      categoryCode: doc.data().categoryCode,
+      source: doc.data().source,
+      status: doc.data().status,
+      mapProvider: doc.data().mapProvider,
+      cellId: doc.data().cellId,
+      createdBy: doc.data().createdBy,
+      createdAt: doc.data().createdAt?.toDate() || new Date(),
+      updatedAt: doc.data().updatedAt?.toDate(),
+    }));
+  } catch (error) {
+    console.error('Failed to fetch places by cellIds:', error);
+    return [];
+  }
 }

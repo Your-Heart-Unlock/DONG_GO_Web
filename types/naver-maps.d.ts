@@ -8,6 +8,7 @@ declare namespace naver {
     getCenter(): LatLng;
     setZoom(zoom: number, animate?: boolean): void;
     getZoom(): number;
+    getBounds(): LatLngBounds;
     destroy(): void;
     panTo(coord: LatLng | LatLngLiteral, options?: PanOptions): void;
     fitBounds(bounds: LatLngBounds, options?: FitBoundsOptions): void;

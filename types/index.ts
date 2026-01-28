@@ -12,9 +12,10 @@ export interface User {
 // Place Types
 export type PlaceSource = 'naver_import' | 'user_added';
 export type PlaceStatus = 'active' | 'hidden' | 'deleted';
+export type MapProvider = 'naver' | 'kakao';
 
 export interface Place {
-  placeId: string; // 네이버 지도 고유 ID (sid)
+  placeId: string; // 네이버 또는 카카오 지도 고유 ID
   name: string;
   address: string;
   lat: number;
@@ -23,6 +24,8 @@ export interface Place {
   categoryCode?: string; // 필터용 (예: "DINING")
   source: PlaceSource;
   status: PlaceStatus;
+  mapProvider?: MapProvider; // 지도 제공자 (naver/kakao), 없으면 source로 추정
+  cellId?: string; // 그리드 cellId (bounds 기반 쿼리용)
   createdBy: string; // uid
   createdAt: Date;
   updatedAt?: Date;

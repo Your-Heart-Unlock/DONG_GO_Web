@@ -1,10 +1,39 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { auth } from '@/lib/firebase/client';
 
 export default function AdminDashboard() {
   const { user } = useAuth();
+  const [migrateResult, setMigrateResult] = useState<string | null>(null);
+  const [migrating, setMigrating] = useState(false);
+
+  const handleMigrateCellId = async () => {
+    if (!auth?.currentUser) {
+      setMigrateResult('로그인이 필요합니다.');
+      return;
+    }
+    setMigrating(true);
+    setMigrateResult(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/migrate-cellid', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setMigrateResult(
+        `완료: 전체 ${data.total}개 / 업데이트 ${data.updated}개 / 스킵 ${data.skipped}개 / 실패 ${data.failed}개`
+      );
+    } catch (err) {
+      setMigrateResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setMigrating(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -94,6 +123,26 @@ export default function AdminDashboard() {
         <p className="text-xs text-gray-500 mt-4 text-center">
           통계 기능은 추후 구현 예정
         </p>
+      </div>
+
+      {/* 데이터 마이그레이션 */}
+      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">데이터 마이그레이션</h2>
+        <p className="text-sm text-gray-600 mb-4">
+          기존 장소 데이터에 cellId 필드를 추가합니다. (1회 실행)
+        </p>
+        <button
+          onClick={handleMigrateCellId}
+          disabled={migrating}
+          className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+        >
+          {migrating ? '마이그레이션 중...' : 'cellId 마이그레이션 실행'}
+        </button>
+        {migrateResult && (
+          <p className={`mt-3 text-sm ${migrateResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
+            {migrateResult}
+          </p>
+        )}
       </div>
     </div>
   );

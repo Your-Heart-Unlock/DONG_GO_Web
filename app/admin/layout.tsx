@@ -42,6 +42,12 @@ export default function AdminLayout({
                   >
                     장소
                   </Link>
+                  <Link
+                    href="/admin/security-test"
+                    className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                  >
+                    보안 테스트
+                  </Link>
                 </nav>
               </div>
               <Link

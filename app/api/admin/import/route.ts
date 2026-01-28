@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
 import { ImportRow, ImportDuplicatePolicy } from '@/types';
+import { computeCellId } from '@/lib/utils/cellId';
 
 /**
  * Admin Import API
@@ -93,6 +94,7 @@ export async function POST(request: NextRequest) {
                 lng: row.lng,
                 category: row.category,
                 categoryCode: row.categoryCode || '',
+                cellId: computeCellId(row.lat, row.lng),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
               });
               result.updated++;
@@ -112,6 +114,8 @@ export async function POST(request: NextRequest) {
               categoryCode: row.categoryCode || '',
               source: 'naver_import',
               status: 'active',
+              mapProvider: 'naver',
+              cellId: computeCellId(row.lat, row.lng),
               createdBy: ownerUid,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });

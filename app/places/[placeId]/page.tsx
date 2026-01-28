@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getPlaceById } from '@/lib/firebase/places';
 import { getPlaceStats } from '@/lib/firebase/reviews';
-import { Place, PlaceStats, RatingTier } from '@/types';
+import { Place, PlaceStats, RatingTier, MapProvider } from '@/types';
 import ReviewList from '@/components/reviews/ReviewList';
 
 interface PlaceDetailPageProps {
@@ -76,7 +76,21 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
     );
   }
 
-  const naverMapUrl = `https://map.naver.com/p/entry/place/${place.placeId}`;
+  // 지도 제공자 판별: mapProvider 필드 우선, 없으면 source로 추정
+  function getMapProvider(p: Place): MapProvider {
+    if (p.mapProvider) return p.mapProvider;
+    // 기존 데이터 하위 호환: naver_import는 네이버, user_added는 네이버 기본값
+    return p.source === 'naver_import' ? 'naver' : 'naver';
+  }
+
+  const provider = getMapProvider(place);
+  const mapUrl = provider === 'kakao'
+    ? `https://place.map.kakao.com/${place.placeId}`
+    : `https://map.naver.com/p/entry/place/${place.placeId}`;
+  const mapLabel = provider === 'kakao' ? '카카오 지도' : '네이버 지도';
+  const mapButtonClass = provider === 'kakao'
+    ? 'flex-shrink-0 px-4 py-2 bg-yellow-400 text-gray-900 text-sm font-medium rounded-lg hover:bg-yellow-500 transition-colors'
+    : 'flex-shrink-0 px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors';
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -107,12 +121,12 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
                 <p className="mt-1 text-sm text-gray-500">{place.category}</p>
               </div>
               <a
-                href={naverMapUrl}
+                href={mapUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-shrink-0 px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
+                className={mapButtonClass}
               >
-                네이버 지도
+                {mapLabel}
               </a>
             </div>
 

@@ -1,0 +1,144 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Helpers ----------
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return signedIn()
+        ? get(/databases/$(database)/documents/users/$(request.auth.uid))
+        : null;
+    }
+
+    function role() {
+      return signedIn() ? userDoc().data.role : "guest";
+    }
+
+    function isOwner() {
+      return role() == "owner";
+    }
+
+    function isMemberOrOwner() {
+      return role() == "member" || role() == "owner";
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isValidLatLng(lat, lng) {
+      return lat is number && lng is number
+        && lat >= -90 && lat <= 90
+        && lng >= -180 && lng <= 180;
+    }
+
+    // ---------- users ----------
+    match /users/{uid} {
+      // 본인 문서 생성(온보딩) 허용
+      allow create: if isSelf(uid)
+        && request.resource.data.nickname is string
+        && request.resource.data.role == "pending";
+
+      // 본인 read 가능, owner는 운영상 read 가능
+      allow read: if isSelf(uid) || isOwner();
+
+      // 본인은 nickname 등만 수정 가능(역할(role)은 수정 금지)
+      allow update: if isSelf(uid)
+        && !( "role" in request.resource.data.diff(resource.data).changedKeys())
+        && (request.resource.data.nickname == ""
+        	|| (request.resource.data.nickname.size() >= 2
+        		&& request.resource.data.nickname.size() <= 20));
+
+      // owner는 운영을 위해 사용자 문서 수정(승인/역할 변경) 가능
+      allow update: if isOwner();
+
+      allow delete: if isOwner();
+    }
+
+    // ---------- places (public-ish) ----------
+    match /places/{placeId} {
+      // place 기본 정보는 guest/pending 포함 read 허용
+      allow read: if true;
+
+      // create: member/owner만. docId == placeId로 고정(중복 방지)
+      allow create: if isMemberOrOwner()
+        && request.resource.data.placeId == placeId
+        && request.resource.data.name is string
+        && request.resource.data.address is string
+        && isValidLatLng(request.resource.data.lat, request.resource.data.lng)
+        && request.resource.data.source in ["naver_import", "user_added"]
+        && request.resource.data.status in ["active", "hidden", "deleted"];
+
+      // place 수정/삭제는 owner만 (멤버는 요청(requests)만)
+      allow update, delete: if isOwner();
+    }
+
+    // ---------- place stats (subcollection, public readable) ----------
+    match /places/{placeId}/stats/{docId} {
+      allow read: if true;          // guest/pending도 OK
+      allow write: if isOwner();    // 또는 서버만(Cloud Functions/Admin SDK)
+    }
+
+    // ---------- stats (top-level, public readable) ----------
+    match /stats/{placeId} {
+      allow read: if true;                // guest/pending도 통계 조회 가능
+      allow write: if isMemberOrOwner();  // 리뷰 CRUD 시 stats 자동 업데이트
+    }
+
+    // ---------- reviews (sensitive) ----------
+    match /reviews/{reviewId} {
+      // pending/guest 차단
+      allow read: if isMemberOrOwner();
+
+      allow create: if isMemberOrOwner()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.placeId is string
+        && request.resource.data.ratingTier in ["S","A","B","C","F"];
+
+      // 작성자만 수정/삭제
+      allow update, delete: if isMemberOrOwner()
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // ---------- visits (sensitive) ----------
+    match /visits/{visitId} {
+      allow read: if isMemberOrOwner();
+
+      allow create: if isMemberOrOwner()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.placeId is string;
+
+      allow update, delete: if isMemberOrOwner()
+        && resource.data.uid == request.auth.uid;
+    }
+
+    // ---------- requests ----------
+    match /requests/{requestId} {
+      // member/owner만 (pending/guest 차단)
+      allow read: if isMemberOrOwner();
+
+      // member가 생성 가능 (place_edit/place_delete)
+      allow create: if isMemberOrOwner()
+        && request.resource.data.requestedBy == request.auth.uid
+        && request.resource.data.type in ["place_edit", "place_delete"]
+        && request.resource.data.status == "open";
+
+      // 승인/거절은 owner만
+      allow update, delete: if isOwner();
+    }
+
+    // ---------- admin logs ----------
+    match /admin_logs/{logId} {
+      allow read, write: if isOwner();
+    }
+
+    // ---------- config ----------
+    match /config/{docId} {
+      allow read: if true;        // 라벨 매핑 공개 OK
+      allow write: if isOwner();
+    }
+  }
+}

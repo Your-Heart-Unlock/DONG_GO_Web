@@ -2,19 +2,22 @@
 
 ## 🎯 현재 작업 우선순위 (주차별 계획)
 
-**업데이트: 2026-01-27**
+**업데이트: 2026-01-28**
 
 ### P0 - MVP 완성 (즉시, 1일)
 > **목표**: 보안 확정 + 기본 버그 수정
 
-1. [ ] **보안 규칙 테스트** (D섹션) - 0.5d
-   - pending/guest가 reviews 못 읽는지 검증
-   - member가 타인 리뷰 수정 못 하는지 검증
-   - 직접 URL 접근 및 콘솔 write 시도 테스트
+1. [x] **보안 규칙 테스트** (D섹션) - 0.5d
+   - firestore.rules 파일 생성 (프로젝트 루트, 버전 관리)
+   - /admin/security-test 페이지 구현 (자동 테스트 8개항목 + 수동 테스트 가이드)
+   - pending/guest reviews 차단, 타인 uid 위조 차단, admin_logs 접근 차단 등 검증 가능
 
-2. [ ] **지도 링크 동적 처리** (F섹션) - 0.5d
-   - 네이버 ID면 네이버 지도, 카카오 ID면 카카오 지도
-   - places 문서에 mapProvider 필드 추가 또는 placeId 패턴으로 판단
+2. [x] **지도 링크 동적 처리** (F섹션) - 0.5d
+   - Place 타입에 mapProvider 필드 추가 (naver | kakao)
+   - 장소 추가 시 naver-resolve 성공 여부에 따라 mapProvider 자동 설정
+   - Import 시 mapProvider: 'naver' 자동 설정
+   - 장소 상세 페이지에서 mapProvider 기반 동적 URL/버튼 렌더링
+   - 기존 데이터 하위 호환 (mapProvider 없으면 source로 추정)
 
 **완료 시**: MVP 100% → 실제 사용 가능 🎉
 
@@ -23,10 +26,11 @@
 ### P1 - 기본 UX 개선 (1주차, 5.5일)
 > **목표**: 비용 절감 + 사용성 개선
 
-3. [ ] **지도 성능 최적화** (E섹션) - 2d ⭐ 최우선
-   - 줌 게이트 + bounds 기반 로딩 (읽기 비용 절감)
-   - geohash/cellId 인덱스 활용
-   - 마커 클러스터링
+3. [x] **지도 성능 최적화** (E섹션) - 2d ⭐ 최우선
+   - 줌 게이트 + bounds 기반 로딩 (cellId 그리드, 읽기 비용 절감)
+   - cellId 인덱스 활용 (places 컬렉션에 cellId 필드 추가)
+   - 마이그레이션 API: `/api/admin/migrate-cellid`
+   - 마커 클러스터링 (장소 300개 초과 시 추후 추가)
 
 4. [ ] **스마트 필터** (N섹션) - 2d
    - 카테고리/등급/지역 필터링
@@ -182,8 +186,8 @@
 ## D. 권한/보안 규칙 적용 (0.5d) → 상세: `IMPL-D_SECURITY_RULES.md`
 - [x] Firestore Rules 적용 (IMPL-D_SECURITY_RULES.md 기반, Firebase Console에 배포됨)
 - [x] Storage Rules 적용(로그인 사용자만 + owner/member만 업로드)
-- [ ] pending/guest가 reviews/visits를 못 읽는지 테스트
-- [ ] member가 타인 리뷰 수정 못 하는지 테스트
+- [x] pending/guest가 reviews/visits를 못 읽는지 테스트 → `/admin/security-test` 페이지로 검증 가능
+- [x] member가 타인 리뷰 수정 못 하는지 테스트 → `/admin/security-test` 페이지로 검증 가능
 
 ---
 
@@ -194,8 +198,8 @@
 - [x] 마커 클릭 → 바텀시트(간략 정보 + stats 요약)
 - [x] 바텀시트 클릭 → `/places/[placeId]` 이동
 - [x] 홈 화면에 장소 추가 FAB 버튼 (member/owner만)
-- [ ] **줌 게이트 + bounds 기반 로딩** (줌 낮을 때 마커 로딩 안함, 높을 때만 현재 화면 로딩)
-- [ ] **places에 geohash/cellId 필드 추가** (범위 쿼리용 인덱스)
+- [x] **줌 게이트 + bounds 기반 로딩** (줌 < 14일 때 "확대해주세요" 오버레이, 줌 >= 14일 때 cellId 기반 쿼리)
+- [x] **places에 cellId 필드 추가** (0.01도 그리드, bounds 기반 Firestore 'in' 쿼리)
 - [ ] **마커 클러스터링** (렌더링 성능 향상)
 - [ ] **검색/필터 기능** (카테고리, 지역별 필터링)
 
@@ -210,7 +214,7 @@
   - [ ] 사진 갤러리 표시 - **UI만, 업로드 미구현**
 - [x] pending/guest일 때:
   - [x] 리뷰/방문/사진 UI는 "잠금 상태"로 표시(안내 문구)
-- [ ] **지도 링크 동적 처리** (네이버 ID면 네이버, 카카오 ID면 카카오 지도)
+- [x] **지도 링크 동적 처리** (mapProvider 필드 기반 네이버/카카오 자동 분기)
 
 ---
 
