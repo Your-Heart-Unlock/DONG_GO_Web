@@ -35,7 +35,7 @@
 | [IMPL-B_FIREBASE_SETUP.md](IMPL-B_FIREBASE_SETUP.md) | B. Firebase 기본 세팅 | ✅ 완료 | Firebase 프로젝트, SDK 연동 |
 | [IMPL-C_AUTH_ONBOARDING.md](IMPL-C_AUTH_ONBOARDING.md) | C. 인증 + 온보딩 | ✅ 완료 | Google 로그인, 닉네임 설정 |
 | [IMPL-D_SECURITY_RULES.md](IMPL-D_SECURITY_RULES.md) | D. 보안 규칙 | ✅ 완료 | Firestore/Storage Rules |
-| [IMPL-E_MAP_BOTTOMSHEET.md](IMPL-E_MAP_BOTTOMSHEET.md) | E. 지도 + 바텀시트 | ⚠️ 부분 | 줌 게이트, 클러스터링 미완 |
+| [IMPL-E_MAP_BOTTOMSHEET.md](IMPL-E_MAP_BOTTOMSHEET.md) | E. 지도 + 바텀시트 | ✅ 완료 | 줌 게이트, cellId 로딩, 필터 |
 | [IMPL-F_PLACE_DETAIL.md](IMPL-F_PLACE_DETAIL.md) | F. 장소 상세 페이지 | ⚠️ 부분 | 방문 기록, 사진 미완 |
 | [IMPL-G_ADD_PLACE.md](IMPL-G_ADD_PLACE.md) | G. 장소 추가 | ⚠️ 부분 | 좌표 기반 중복 체크 미완 |
 | [IMPL-H_REVIEW_VISIT.md](IMPL-H_REVIEW_VISIT.md) | H. 리뷰/방문 | ⚠️ 부분 | 리뷰 완료, 방문/사진 미완 |
@@ -57,7 +57,7 @@
 | `REF_RATING_SYSTEM.md` | 평가 시스템 (S/A/B/C/F 등급) 설명 |
 | `REF_USER_EXPERIENCE.md` | UX 정책 (A/B/C 정책, 라이트 모드 등) |
 | `REF_ADMIN_SPEC.md` | 관리자 기능 상세 스펙 |
-| `REF_MAP_STRATEGY.md` | 지도 마커 로딩, 클러스터링 전략 |
+| `REF_MAP_STRATEGY.md` | 지도 마커 로딩 전략 (줌 게이트, cellId) |
 | `REF_DESIGN_SYSTEM.md` | 디자인 시스템, 색상, 마커 디자인 |
 
 ---

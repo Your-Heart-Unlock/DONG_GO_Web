@@ -13,7 +13,7 @@ import {
   documentId,
 } from 'firebase/firestore';
 import { db } from './client';
-import { Place } from '@/types';
+import { Place, RatingTier, PlaceStats } from '@/types';
 import { computeCellId } from '@/lib/utils/cellId';
 
 /**
@@ -150,8 +150,29 @@ export async function unhidePlace(placeId: string) {
 }
 
 /**
+ * tierCounts에서 평균 등급 계산
+ */
+function calculateAvgTier(stats: PlaceStats | null): RatingTier | null {
+  if (!stats || stats.reviewCount === 0) return null;
+
+  const tierWeights: Record<RatingTier, number> = { S: 5, A: 4, B: 3, C: 2, F: 1 };
+  const totalWeight = Object.entries(stats.tierCounts).reduce(
+    (sum, [tier, count]) => sum + tierWeights[tier as RatingTier] * count,
+    0
+  );
+  const avgWeight = totalWeight / stats.reviewCount;
+
+  if (avgWeight >= 4.5) return 'S';
+  if (avgWeight >= 3.5) return 'A';
+  if (avgWeight >= 2.5) return 'B';
+  if (avgWeight >= 1.5) return 'C';
+  return 'F';
+}
+
+/**
  * cellId 배열로 장소 조회 (bounds 기반 지도 로딩)
  * Firestore 'in' 쿼리는 최대 30개까지 지원하므로, 30개씩 나눠서 쿼리
+ * stats도 함께 조회하여 avgTier 계산
  */
 export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
   if (!db || cellIds.length === 0) return [];
@@ -172,27 +193,53 @@ export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
       );
 
       const snapshot = await getDocs(q);
-      const places = snapshot.docs.map((doc) => ({
-        placeId: doc.id,
-        name: doc.data().name,
-        address: doc.data().address,
-        lat: doc.data().lat,
-        lng: doc.data().lng,
-        category: doc.data().category,
-        categoryCode: doc.data().categoryCode,
-        source: doc.data().source,
-        status: doc.data().status,
-        mapProvider: doc.data().mapProvider,
-        cellId: doc.data().cellId,
-        createdBy: doc.data().createdBy,
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate(),
+      const places = snapshot.docs.map((docSnap) => ({
+        placeId: docSnap.id,
+        name: docSnap.data().name,
+        address: docSnap.data().address,
+        lat: docSnap.data().lat,
+        lng: docSnap.data().lng,
+        category: docSnap.data().category,
+        categoryCode: docSnap.data().categoryCode,
+        source: docSnap.data().source,
+        status: docSnap.data().status,
+        mapProvider: docSnap.data().mapProvider,
+        cellId: docSnap.data().cellId,
+        createdBy: docSnap.data().createdBy,
+        createdAt: docSnap.data().createdAt?.toDate() || new Date(),
+        updatedAt: docSnap.data().updatedAt?.toDate(),
       }));
 
       allPlaces.push(...places);
     }
 
-    return allPlaces;
+    // stats 조회하여 avgTier 계산
+    const placeIds = allPlaces.map(p => p.placeId);
+    const statsMap = new Map<string, PlaceStats>();
+
+    // stats도 30개씩 나눠서 조회
+    for (let i = 0; i < placeIds.length; i += BATCH_SIZE) {
+      const batch = placeIds.slice(i, i + BATCH_SIZE);
+      const statsPromises = batch.map(id => getDoc(doc(db!, 'stats', id)));
+      const statsSnapshots = await Promise.all(statsPromises);
+
+      statsSnapshots.forEach((snap, idx) => {
+        if (snap.exists()) {
+          const data = snap.data();
+          statsMap.set(batch[idx], {
+            reviewCount: data.reviewCount || 0,
+            tierCounts: data.tierCounts || { S: 0, A: 0, B: 0, C: 0, F: 0 },
+            topTags: data.topTags || [],
+          });
+        }
+      });
+    }
+
+    // avgTier 추가
+    return allPlaces.map(place => ({
+      ...place,
+      avgTier: calculateAvgTier(statsMap.get(place.placeId) || null),
+    }));
   } catch (error) {
     console.error('Failed to fetch places by cellIds:', error);
     return [];

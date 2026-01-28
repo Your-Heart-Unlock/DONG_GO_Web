@@ -2,8 +2,25 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useNaverMaps } from '@/lib/naver/useNaverMaps';
-import { Place } from '@/types';
+import { Place, RatingTier } from '@/types';
 import { getCellIdsForBounds } from '@/lib/utils/cellId';
+
+// 등급별 마커 색상
+const TIER_COLORS: Record<RatingTier | 'none', string> = {
+  S: '#8B5CF6', // Purple
+  A: '#3B82F6', // Blue
+  B: '#22C55E', // Green
+  C: '#F97316', // Orange
+  F: '#EF4444', // Red
+  none: '#9CA3AF', // Gray (등급 없음)
+};
+
+// SVG 마커 아이콘 생성
+function createMarkerIcon(tier: RatingTier | null | undefined): string {
+  const color = tier ? TIER_COLORS[tier] : TIER_COLORS.none;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36"><path fill="${color}" stroke="#fff" stroke-width="1.5" d="M14 1C7.4 1 2 6.4 2 13c0 8.5 12 21 12 21s12-12.5 12-21c0-6.6-5.4-12-12-12z"/><circle fill="#fff" cx="14" cy="13" r="5"/></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+}
 
 export interface MapBounds {
   sw: { lat: number; lng: number };
@@ -131,6 +148,11 @@ export default function NaverMapView({
         map,
         title: place.name,
         clickable: true,
+        icon: {
+          url: createMarkerIcon(place.avgTier),
+          size: new naver.maps.Size(28, 36),
+          anchor: new naver.maps.Point(14, 36),
+        },
       });
 
       naver.maps.Event.addListener(marker, 'click', () => {

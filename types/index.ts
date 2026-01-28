@@ -26,6 +26,7 @@ export interface Place {
   status: PlaceStatus;
   mapProvider?: MapProvider; // 지도 제공자 (naver/kakao), 없으면 source로 추정
   cellId?: string; // 그리드 cellId (bounds 기반 쿼리용)
+  avgTier?: RatingTier | null; // 평균 등급 (마커 색상용, null=리뷰 없음)
   createdBy: string; // uid
   createdAt: Date;
   updatedAt?: Date;

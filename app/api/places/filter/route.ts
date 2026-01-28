@@ -230,7 +230,7 @@ export async function GET(request: NextRequest) {
 
     // 7. 통계 계산
     const categoryCounts: { [key: string]: number } = {};
-    const tierCounts: { [key: string]: number } = {};
+    const tierCountsAgg: { [key: string]: number } = {};
 
     snapshot.docs.forEach(doc => {
       const data = doc.data();
@@ -238,15 +238,63 @@ export async function GET(request: NextRequest) {
       categoryCounts[category] = (categoryCounts[category] || 0) + 1;
     });
 
-    console.log('[Filter API] Final places count:', places.length);
+    // 8. avgTier 추가 (마커 색상용)
+    const placeIds = places.map(p => p.placeId);
+    const avgTierMap = new Map<string, RatingTier | null>();
+
+    // stats 조회 (30개씩 배치)
+    const BATCH_SIZE = 30;
+    for (let i = 0; i < placeIds.length; i += BATCH_SIZE) {
+      const batch = placeIds.slice(i, i + BATCH_SIZE);
+      const statsPromises = batch.map(id => adminDb!.collection('stats').doc(id).get());
+      const statsSnapshots = await Promise.all(statsPromises);
+
+      statsSnapshots.forEach((docSnap, idx) => {
+        if (docSnap.exists) {
+          const data = docSnap.data();
+          const reviewCount = data?.reviewCount ?? 0;
+          const tierCounts = data?.tierCounts ?? { S: 0, A: 0, B: 0, C: 0, F: 0 };
+
+          if (reviewCount > 0) {
+            const tierWeights: Record<string, number> = { S: 5, A: 4, B: 3, C: 2, F: 1 };
+            const totalWeight = Object.entries(tierCounts).reduce(
+              (sum, [tier, count]) => sum + (tierWeights[tier] ?? 0) * ((count as number) ?? 0),
+              0
+            );
+            const avgWeight = totalWeight / reviewCount;
+
+            let avgTier: RatingTier = 'C';
+            if (avgWeight >= 4.5) avgTier = 'S';
+            else if (avgWeight >= 3.5) avgTier = 'A';
+            else if (avgWeight >= 2.5) avgTier = 'B';
+            else if (avgWeight >= 1.5) avgTier = 'C';
+            else avgTier = 'F';
+
+            avgTierMap.set(batch[idx], avgTier);
+          } else {
+            avgTierMap.set(batch[idx], null);
+          }
+        } else {
+          avgTierMap.set(batch[idx], null);
+        }
+      });
+    }
+
+    // places에 avgTier 추가
+    const placesWithTier = places.map(p => ({
+      ...p,
+      avgTier: avgTierMap.get(p.placeId) ?? null,
+    }));
+
+    console.log('[Filter API] Final places count:', placesWithTier.length);
 
     return NextResponse.json({
-      places,
+      places: placesWithTier,
       stats: {
         totalCount: snapshot.size,
-        filteredCount: places.length,
+        filteredCount: placesWithTier.length,
         categoryCounts,
-        tierCounts,
+        tierCounts: tierCountsAgg,
       },
     });
   } catch (error) {
