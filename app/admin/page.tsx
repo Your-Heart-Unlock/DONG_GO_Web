@@ -9,6 +9,8 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const [migrateResult, setMigrateResult] = useState<string | null>(null);
   const [migrating, setMigrating] = useState(false);
+  const [geohashResult, setGeohashResult] = useState<string | null>(null);
+  const [migratingGeohash, setMigratingGeohash] = useState(false);
 
   const handleMigrateCellId = async () => {
     if (!auth?.currentUser) {
@@ -32,6 +34,31 @@ export default function AdminDashboard() {
       setMigrateResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
     } finally {
       setMigrating(false);
+    }
+  };
+
+  const handleMigrateGeohash = async () => {
+    if (!auth?.currentUser) {
+      setGeohashResult('로그인이 필요합니다.');
+      return;
+    }
+    setMigratingGeohash(true);
+    setGeohashResult(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/migrate-geohash', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setGeohashResult(
+        `완료: 전체 ${data.total}개 / 업데이트 ${data.updated}개 / 스킵 ${data.skipped}개 / 실패 ${data.failed}개`
+      );
+    } catch (err) {
+      setGeohashResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setMigratingGeohash(false);
     }
   };
 
@@ -127,22 +154,47 @@ export default function AdminDashboard() {
 
       {/* 데이터 마이그레이션 */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-2">데이터 마이그레이션</h2>
-        <p className="text-sm text-gray-600 mb-4">
-          기존 장소 데이터에 cellId 필드를 추가합니다. (1회 실행)
-        </p>
-        <button
-          onClick={handleMigrateCellId}
-          disabled={migrating}
-          className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-        >
-          {migrating ? '마이그레이션 중...' : 'cellId 마이그레이션 실행'}
-        </button>
-        {migrateResult && (
-          <p className={`mt-3 text-sm ${migrateResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
-            {migrateResult}
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">데이터 마이그레이션</h2>
+
+        {/* cellId 마이그레이션 */}
+        <div className="mb-6 pb-6 border-b border-gray-200">
+          <h3 className="text-sm font-medium text-gray-800 mb-2">cellId 마이그레이션</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            기존 장소 데이터에 cellId 필드를 추가합니다. (bounds 기반 쿼리용)
           </p>
-        )}
+          <button
+            onClick={handleMigrateCellId}
+            disabled={migrating}
+            className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {migrating ? '마이그레이션 중...' : 'cellId 마이그레이션 실행'}
+          </button>
+          {migrateResult && (
+            <p className={`mt-3 text-sm ${migrateResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
+              {migrateResult}
+            </p>
+          )}
+        </div>
+
+        {/* geohash 마이그레이션 */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-800 mb-2">geohash 마이그레이션</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            기존 장소 데이터에 geohash 필드를 추가합니다. (좌표 기반 중복 체크용)
+          </p>
+          <button
+            onClick={handleMigrateGeohash}
+            disabled={migratingGeohash}
+            className="px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {migratingGeohash ? '마이그레이션 중...' : 'geohash 마이그레이션 실행'}
+          </button>
+          {geohashResult && (
+            <p className={`mt-3 text-sm ${geohashResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
+              {geohashResult}
+            </p>
+          )}
+        </div>
       </div>
     </div>
   );

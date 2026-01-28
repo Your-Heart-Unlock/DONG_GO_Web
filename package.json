@@ -14,10 +14,12 @@
     "firebase": "^11.2.0",
     "firebase-admin": "^13.1.0",
     "next": "^15.1.5",
+    "ngeohash": "^0.6.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@types/ngeohash": "^0.6.8",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",

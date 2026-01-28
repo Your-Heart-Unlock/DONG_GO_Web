@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { createPlace, getPlaceById } from '@/lib/firebase/places';
+import { createPlace, getPlaceById, findNearbyPlaces } from '@/lib/firebase/places';
 import { MapProvider } from '@/types';
 
 interface SearchResult {
@@ -124,18 +124,31 @@ export default function AddPlacePage() {
         // 네이버 매칭 실패 시 카카오 ID 유지
       }
 
-      // 이미 존재하는지 확인 (네이버 ID, 카카오 ID 모두)
+      // 1. ID 기반 중복 체크 (네이버 ID, 카카오 ID 모두)
       const existing = await getPlaceById(finalPlaceId);
       const existingKakao = finalPlaceId !== place.placeId ? await getPlaceById(place.placeId) : null;
 
-      const found = existing || existingKakao;
-      if (found) {
+      const foundById = existing || existingKakao;
+      if (foundById) {
         const foundId = existing ? finalPlaceId : place.placeId;
         const goToDetail = confirm(
           `"${place.name}"은(는) 이미 등록된 장소입니다.\n상세 페이지로 이동할까요?`
         );
         if (goToDetail) {
           router.push(`/places/${foundId}`);
+        }
+        return;
+      }
+
+      // 2. 좌표 기반 중복 체크 (100m 이내)
+      const nearbyPlaces = await findNearbyPlaces(place.lat, place.lng);
+      if (nearbyPlaces.length > 0) {
+        const nearbyPlace = nearbyPlaces[0];
+        const goToDetail = confirm(
+          `100m 이내에 "${nearbyPlace.name}"이(가) 이미 등록되어 있습니다.\n같은 장소인가요? 상세 페이지로 이동할까요?`
+        );
+        if (goToDetail) {
+          router.push(`/places/${nearbyPlace.placeId}`);
         }
         return;
       }

@@ -138,8 +138,8 @@ await setDoc(doc(db, 'places', placeId), {
 - [x] 네이버 ID 매칭 (naver-resolve)
 - [x] ID 기반 중복 체크
 - [x] 장소 생성 (Firestore)
-- [ ] geohash 또는 cellId 추가
-- [ ] 좌표 기반 중복 체크
+- [x] geohash 또는 cellId 추가
+- [x] 좌표 기반 중복 체크
 
 ## 참고 문서
 - [02_DATA_MODEL.md](02_DATA_MODEL.md) - places 스키마

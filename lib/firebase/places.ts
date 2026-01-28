@@ -15,6 +15,12 @@ import {
 import { db } from './client';
 import { Place, RatingTier, PlaceStats } from '@/types';
 import { computeCellId } from '@/lib/utils/cellId';
+import {
+  encodeGeohash,
+  getGeohashPrefixesForNearbySearch,
+  calculateDistance,
+  DUPLICATE_THRESHOLD_METERS,
+} from '@/lib/utils/geohash';
 
 /**
  * 최근 장소 N개 가져오기
@@ -116,6 +122,7 @@ export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt'>)
   await setDoc(placeRef, {
     ...place,
     cellId: computeCellId(place.lat, place.lng),
+    geohash: encodeGeohash(place.lat, place.lng),
     createdAt: serverTimestamp(),
   });
 }
@@ -242,6 +249,79 @@ export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
     }));
   } catch (error) {
     console.error('Failed to fetch places by cellIds:', error);
+    return [];
+  }
+}
+
+/**
+ * 좌표 기반 중복 체크 - 100m 이내 장소 검색
+ * geohash prefix를 사용하여 효율적으로 검색
+ */
+export async function findNearbyPlaces(
+  lat: number,
+  lng: number,
+  excludePlaceId?: string
+): Promise<Place[]> {
+  if (!db) {
+    console.warn('Firestore is not initialized');
+    return [];
+  }
+
+  try {
+    const placesRef = collection(db, 'places');
+    const prefixes = getGeohashPrefixesForNearbySearch(lat, lng);
+
+    // 각 prefix에 대해 range 쿼리 실행
+    const candidates: Place[] = [];
+
+    for (const prefix of prefixes) {
+      const q = query(
+        placesRef,
+        where('status', '==', 'active'),
+        where('geohash', '>=', prefix),
+        where('geohash', '<=', prefix + '~')
+      );
+
+      const snapshot = await getDocs(q);
+      snapshot.docs.forEach((docSnap) => {
+        const data = docSnap.data();
+        // excludePlaceId가 지정된 경우 해당 장소 제외
+        if (excludePlaceId && docSnap.id === excludePlaceId) return;
+
+        candidates.push({
+          placeId: docSnap.id,
+          name: data.name,
+          address: data.address,
+          lat: data.lat,
+          lng: data.lng,
+          category: data.category,
+          categoryCode: data.categoryCode,
+          source: data.source,
+          status: data.status,
+          mapProvider: data.mapProvider,
+          cellId: data.cellId,
+          geohash: data.geohash,
+          createdBy: data.createdBy,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate(),
+        });
+      });
+    }
+
+    // 중복 제거 (여러 prefix 쿼리에서 같은 장소가 나올 수 있음)
+    const uniqueCandidates = Array.from(
+      new Map(candidates.map((p) => [p.placeId, p])).values()
+    );
+
+    // 실제 거리 계산하여 100m 이내만 필터링
+    const nearbyPlaces = uniqueCandidates.filter((place) => {
+      const distance = calculateDistance(lat, lng, place.lat, place.lng);
+      return distance <= DUPLICATE_THRESHOLD_METERS;
+    });
+
+    return nearbyPlaces;
+  } catch (error) {
+    console.error('Failed to find nearby places:', error);
     return [];
   }
 }
