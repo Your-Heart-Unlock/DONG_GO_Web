@@ -149,19 +149,21 @@ export async function GET(req: NextRequest) {
     const uid = searchParams.get('uid');
     const placeId = searchParams.get('placeId');
 
-    let query = adminDb.collection('wishes');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = adminDb.collection('wishes');
 
     if (uid) {
-      query = query.where('uid', '==', uid) as any;
+      query = query.where('uid', '==', uid);
     }
 
     if (placeId) {
-      query = query.where('placeId', '==', placeId) as any;
+      query = query.where('placeId', '==', placeId);
     }
 
     const snapshot = await query.get();
 
-    const wishes = snapshot.docs.map((doc) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wishes = snapshot.docs.map((doc: any) => {
       const data = doc.data();
       return {
         wishId: doc.id,

@@ -3,8 +3,9 @@
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { auth } from '@/lib/firebase/client';
+import { auth, db } from '@/lib/firebase/client';
 import { getPlaceById } from '@/lib/firebase/places';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { getPlaceStats } from '@/lib/firebase/reviews';
 import { Place, PlaceStats, RatingTier, MapProvider } from '@/types';
 import ReviewList from '@/components/reviews/ReviewList';
@@ -45,7 +46,8 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
           if (data.createdBy) {
             fetchCreatorNickname(data.createdBy);
           } else {
-            setCreatorNickname('알 수 없음');
+            // createdBy가 없으면 훈동 닉네임 표시
+            setCreatorNickname('훈동');
           }
         }
       } catch (err) {
@@ -58,6 +60,33 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
 
     fetchPlace();
   }, [placeId]);
+
+  // 기존 삭제 요청 확인
+  useEffect(() => {
+    async function checkExistingDeleteRequest() {
+      if (!db || !user || !isMemberOrOwner) return;
+
+      try {
+        const requestsRef = collection(db, 'requests');
+        const q = query(
+          requestsRef,
+          where('type', '==', 'place_delete'),
+          where('placeId', '==', placeId),
+          where('requestedBy', '==', user.uid),
+          where('status', '==', 'open'),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          setHasOpenDeleteRequest(true);
+        }
+      } catch (error) {
+        console.error('Failed to check existing delete request:', error);
+      }
+    }
+
+    checkExistingDeleteRequest();
+  }, [placeId, user, isMemberOrOwner]);
 
   // 등록자 닉네임 조회
   async function fetchCreatorNickname(uid: string) {
@@ -233,8 +262,8 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
             </div>
           </div>
 
-          {/* 삭제 요청 버튼 (등록자가 아닌 member/owner만) */}
-          {isMemberOrOwner && user && place.createdBy !== user.uid && (
+          {/* 삭제 요청 버튼 (member/owner) */}
+          {isMemberOrOwner && user && (
             <div className="border-t border-gray-100 px-6 py-3">
               {hasOpenDeleteRequest ? (
                 <p className="text-sm text-gray-500 text-center">

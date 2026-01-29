@@ -58,7 +58,7 @@ export async function PATCH(
 
     // 요청 조회
     const requestDoc = await adminDb.collection('requests').doc(requestId).get();
-    if (!requestDoc.exists()) {
+    if (!requestDoc.exists) {
       return NextResponse.json(
         { error: 'Request not found' },
         { status: 404 }

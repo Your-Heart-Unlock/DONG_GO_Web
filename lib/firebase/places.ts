@@ -10,8 +10,6 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
-  documentId,
-  arrayUnion,
 } from 'firebase/firestore';
 import { db } from './client';
 import { Place, RatingTier, PlaceStats } from '@/types';
@@ -97,8 +95,7 @@ export async function getPlaceById(placeId: string): Promise<Place | null> {
       status: data.status,
       mapProvider: data.mapProvider,
       cellId: data.cellId,
-      registeredBy: data.registeredBy || [data.createdBy],
-      createdBy: data.createdBy,
+      createdBy: data.createdBy || '',
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate(),
     };
@@ -219,8 +216,7 @@ export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
         status: docSnap.data().status,
         mapProvider: docSnap.data().mapProvider,
         cellId: docSnap.data().cellId,
-        registeredBy: docSnap.data().registeredBy || [docSnap.data().createdBy],
-        createdBy: docSnap.data().createdBy,
+        createdBy: docSnap.data().createdBy || '',
         createdAt: docSnap.data().createdAt?.toDate() || new Date(),
         updatedAt: docSnap.data().updatedAt?.toDate(),
       }));
@@ -311,8 +307,7 @@ export async function findNearbyPlaces(
           mapProvider: data.mapProvider,
           cellId: data.cellId,
           geohash: data.geohash,
-          registeredBy: data.registeredBy || [data.createdBy],
-          createdBy: data.createdBy,
+          createdBy: data.createdBy || '',
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
         });

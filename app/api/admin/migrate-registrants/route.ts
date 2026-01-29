@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
 
 /**
  * POST /api/admin/migrate-registrants
- * 모든 장소의 createdBy를 훈동이 계정 UUID로 설정 (createdBy가 없는 경우)
+ * createdBy가 없거나 naver_import인 장소의 createdBy를 훈동이 계정 UUID로 설정
+ * 기존 registeredBy 배열 필드도 제거
  */
 export async function POST(request: NextRequest) {
   try {
@@ -68,17 +69,27 @@ export async function POST(request: NextRequest) {
     for (const placeDoc of placesSnapshot.docs) {
       const data = placeDoc.data();
 
-      // 이미 createdBy가 있으면 스킵
-      if (data.createdBy) {
+      // createdBy가 없거나 naver_import인 경우 훈동 UID로 설정
+      const needsUpdate = !data.createdBy || data.source === 'naver_import';
+
+      if (!needsUpdate) {
         skipped++;
         continue;
       }
 
-      // createdBy를 훈동 UID로 설정
-      batch.update(placeDoc.ref, {
+      // createdBy를 훈동 UID로 설정, registeredBy 배열 필드 제거
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updateData: Record<string, any> = {
         createdBy: hoondongUid,
         updatedAt: new Date(),
-      });
+      };
+
+      // 기존 registeredBy 배열 필드가 있으면 제거
+      if (data.registeredBy) {
+        updateData.registeredBy = admin.firestore.FieldValue.delete();
+      }
+
+      batch.update(placeDoc.ref, updateData);
 
       updated++;
       batchCount++;

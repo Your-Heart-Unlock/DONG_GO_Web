@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
 
     // 장소 존재 확인
     const placeDoc = await adminDb.collection('places').doc(placeId).get();
-    if (!placeDoc.exists()) {
+    if (!placeDoc.exists) {
       return NextResponse.json(
         { error: 'Place not found' },
         { status: 404 }
@@ -147,29 +147,58 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // place_delete, place_edit
 
     // 요청 목록 조회
-    let query = adminDb.collection('requests').orderBy('createdAt', 'desc');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let query: any = adminDb.collection('requests').orderBy('createdAt', 'desc');
 
     if (status) {
-      query = query.where('status', '==', status) as any;
+      query = query.where('status', '==', status);
     }
 
     if (type) {
-      query = query.where('type', '==', type) as any;
+      query = query.where('type', '==', type);
     }
 
     const snapshot = await query.get();
 
-    const requests = snapshot.docs.map((doc) => ({
-      requestId: doc.id,
-      type: doc.data().type,
-      placeId: doc.data().placeId,
-      requestedBy: doc.data().requestedBy,
-      payload: doc.data().payload,
-      status: doc.data().status,
-      createdAt: doc.data().createdAt?.toDate() || new Date(),
-      resolvedAt: doc.data().resolvedAt?.toDate(),
-      resolvedBy: doc.data().resolvedBy,
-    }));
+    // 요청 목록에 장소 이름과 요청자 닉네임 추가
+    const requests = await Promise.all(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      snapshot.docs.map(async (doc: any) => {
+        const data = doc.data();
+
+        // 장소 이름 조회
+        let placeName = '알 수 없음';
+        try {
+          const placeDoc = await adminDb!.collection('places').doc(data.placeId).get();
+          if (placeDoc.exists) {
+            placeName = placeDoc.data()?.name || '알 수 없음';
+          }
+        } catch {}
+
+        // 요청자 닉네임 조회
+        let requesterNickname = '알 수 없음';
+        try {
+          const userDoc = await adminDb!.collection('users').doc(data.requestedBy).get();
+          if (userDoc.exists) {
+            requesterNickname = userDoc.data()?.nickname || '알 수 없음';
+          }
+        } catch {}
+
+        return {
+          requestId: doc.id,
+          type: data.type,
+          placeId: data.placeId,
+          placeName,
+          requestedBy: data.requestedBy,
+          requesterNickname,
+          payload: data.payload,
+          status: data.status,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          resolvedAt: data.resolvedAt?.toDate(),
+          resolvedBy: data.resolvedBy,
+        };
+      })
+    );
 
     return NextResponse.json({ requests });
   } catch (error) {
