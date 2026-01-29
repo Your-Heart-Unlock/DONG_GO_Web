@@ -84,19 +84,19 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
       });
 
       // 업로드 완료 처리
-      const uploadPromise = new Promise<any>((resolve, reject) => {
+      const uploadPromise = new Promise<Photo>((resolve, reject) => {
         xhr.addEventListener('load', () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const response = JSON.parse(xhr.responseText);
               resolve(response);
-            } catch (error) {
+            } catch {
               reject(new Error('Failed to parse response'));
             }
           } else {
             try {
-              const error = JSON.parse(xhr.responseText);
-              reject(new Error(error.error || 'Upload failed'));
+              const errorData = JSON.parse(xhr.responseText);
+              reject(new Error(errorData.error || 'Upload failed'));
             } catch {
               reject(new Error(`Upload failed with status ${xhr.status}`));
             }
