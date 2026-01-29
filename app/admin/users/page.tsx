@@ -20,6 +20,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('');
   const [filter, setFilter] = useState<'all' | UserRole>('all');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // 사용자 목록 조회
   const fetchUsers = async () => {
@@ -98,6 +99,43 @@ export default function AdminUsersPage() {
     }
   };
 
+  // Firebase Auth → Firestore 동기화
+  const handleSyncUsers = async () => {
+    if (!firebaseUser) return;
+
+    const confirmed = confirm(
+      'Firebase Auth에 등록되어 있지만 Firestore에 문서가 없는 사용자를 동기화합니다.\n진행하시겠습니까?'
+    );
+    if (!confirmed) return;
+
+    setSyncing(true);
+    try {
+      const idToken = await firebaseUser.getIdToken();
+      const response = await fetch('/api/admin/sync-users', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || '동기화에 실패했습니다.');
+      }
+
+      const data = await response.json();
+
+      if (data.synced === 0) {
+        alert('누락된 사용자가 없습니다.');
+      } else {
+        alert(`${data.synced}명의 사용자를 동기화했습니다.`);
+        await fetchUsers();
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '동기화 실패');
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   // 필터링된 사용자 목록
   const filteredUsers =
     filter === 'all' ? users : users.filter((u) => u.role === filter);
@@ -134,11 +172,20 @@ export default function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">사용자 관리</h1>
-        <p className="mt-2 text-gray-600">
-          사용자 승인 및 역할을 관리합니다.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">사용자 관리</h1>
+          <p className="mt-2 text-gray-600">
+            사용자 승인 및 역할을 관리합니다.
+          </p>
+        </div>
+        <button
+          onClick={handleSyncUsers}
+          disabled={syncing}
+          className="flex-shrink-0 px-4 py-2 text-sm font-medium text-orange-700 bg-orange-50 border border-orange-200 rounded-lg hover:bg-orange-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {syncing ? '동기화 중...' : '누락 사용자 동기화'}
+        </button>
       </div>
 
       {/* 필터 탭 */}
