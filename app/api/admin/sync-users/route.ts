@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       const userRef = adminDb.collection('users').doc(user.uid);
       batch.set(userRef, {
         email: user.email,
-        nickname: user.displayName || '',
+        nickname: '', // 빈 문자열로 생성 → 로그인 시 온보딩 페이지로 이동
         role: 'pending',
         createdAt: new Date(),
         lastLoginAt: new Date(),
