@@ -38,6 +38,63 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
     }
   }
 
+  // 이미지 압축 (Canvas API 사용)
+  async function compressImage(file: File): Promise<File> {
+    const MAX_DIMENSION = 1920;
+    const QUALITY = 0.85;
+
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+
+        // 이미 충분히 작으면 원본 반환
+        if (width <= MAX_DIMENSION && height <= MAX_DIMENSION && file.size < 3 * 1024 * 1024) {
+          resolve(file);
+          return;
+        }
+
+        // 비율 유지하며 리사이즈
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
+          width = Math.round(width * ratio);
+          height = Math.round(height * ratio);
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const compressed = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+              type: 'image/jpeg',
+            });
+            console.log(`[PhotoGallery] 압축: ${(file.size / 1024 / 1024).toFixed(1)}MB → ${(compressed.size / 1024 / 1024).toFixed(1)}MB`);
+            resolve(compressed);
+          },
+          'image/jpeg',
+          QUALITY
+        );
+      };
+      img.onerror = () => reject(new Error('이미지 로드 실패'));
+      const objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
+      // 메모리 누수 방지
+      img.addEventListener('load', () => URL.revokeObjectURL(objectUrl), { once: true });
+    });
+  }
+
   // 사진 업로드
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -47,15 +104,15 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
 
   // 실제 파일 업로드 로직 (재사용 가능)
   async function uploadFile(file: File) {
-    // 파일 크기 체크 (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      alert('파일 크기는 5MB 이하여야 합니다.');
-      return;
-    }
-
     // 이미지 타입 체크
     if (!file.type.startsWith('image/')) {
       alert('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+
+    // 원본 파일 크기 체크 (10MB 초과는 압축 전에 거부)
+    if (file.size > 10 * 1024 * 1024) {
+      alert('파일 크기는 10MB 이하여야 합니다.');
       return;
     }
 
@@ -68,9 +125,18 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
     setUploadProgress(0);
 
     try {
+      // 이미지 압축 (Vercel 4.5MB 페이로드 제한 대응)
+      const compressed = await compressImage(file);
+
+      if (compressed.size > 4 * 1024 * 1024) {
+        alert('이미지 압축 후에도 파일이 너무 큽니다. 더 작은 이미지를 사용해주세요.');
+        setUploading(false);
+        return;
+      }
+
       const token = await auth.currentUser.getIdToken();
       const formData = new FormData();
-      formData.append('photo', file);
+      formData.append('photo', compressed);
 
       // XMLHttpRequest를 사용하여 progress 추적
       const xhr = new XMLHttpRequest();
