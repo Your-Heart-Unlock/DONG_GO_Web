@@ -53,10 +53,10 @@ export async function POST(
       );
     }
 
-    // 파일 크기 체크 (5MB)
-    if (file.size > 5 * 1024 * 1024) {
+    // 파일 크기 체크 (4MB - Vercel 페이로드 제한 대응)
+    if (file.size > 4 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'File size exceeds 5MB limit' },
+        { error: 'File size exceeds 4MB limit' },
         { status: 400 }
       );
     }
