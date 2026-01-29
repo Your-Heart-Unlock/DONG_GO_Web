@@ -46,8 +46,7 @@ export interface Place {
   geohash?: string; // 좌표 기반 중복 체크용 (9자리)
   avgTier?: RatingTier | null; // 평균 등급 (마커 색상용, null=리뷰 없음)
   photos?: Photo[]; // 사진 목록 (조회 시 join)
-  registeredBy: string[]; // 이 장소를 등록한 사용자 uid 목록 (여러 명이 같은 장소 등록 가능)
-  createdBy: string; // 최초 등록자 uid (하위 호환)
+  createdBy: string; // 등록자 uid (1명만 가능)
   createdAt: Date;
   updatedAt?: Date;
 }
@@ -81,6 +80,15 @@ export interface Visit {
   createdAt: Date;
 }
 
+// Wish Types
+export interface Wish {
+  wishId: string;
+  placeId: string;
+  uid: string;
+  note?: string; // 선택적 메모 (예: "친구와 가고 싶음")
+  createdAt: Date;
+}
+
 // Stats Types
 export interface PlaceStats {
   reviewCount: number;
@@ -93,6 +101,7 @@ export interface PlaceStats {
   };
   topTags: string[];
   reviewerUids: string[]; // 리뷰를 남긴 사용자 uid 목록
+  wishCount?: number; // 이 장소를 가고 싶어하는 사람 수
 }
 
 // Request Types

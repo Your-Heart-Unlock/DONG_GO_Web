@@ -3,7 +3,9 @@
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
+import { auth, db } from '@/lib/firebase/client';
 import { getPlaceById } from '@/lib/firebase/places';
+import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { getPlaceStats } from '@/lib/firebase/reviews';
 import { Place, PlaceStats, RatingTier, MapProvider } from '@/types';
 import ReviewList from '@/components/reviews/ReviewList';
@@ -20,6 +22,9 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
   const [stats, setStats] = useState<PlaceStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [creatorNickname, setCreatorNickname] = useState<string>('로딩 중...');
+  const [hasOpenDeleteRequest, setHasOpenDeleteRequest] = useState(false);
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
@@ -36,6 +41,14 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
         } else {
           setPlace(data);
           setStats(statsData);
+
+          // 등록자 닉네임 가져오기
+          if (data.createdBy) {
+            fetchCreatorNickname(data.createdBy);
+          } else {
+            // createdBy가 없으면 훈동 닉네임 표시
+            setCreatorNickname('훈동');
+          }
         }
       } catch (err) {
         setError('장소를 불러오는데 실패했습니다.');
@@ -47,6 +60,92 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
 
     fetchPlace();
   }, [placeId]);
+
+  // 기존 삭제 요청 확인
+  useEffect(() => {
+    async function checkExistingDeleteRequest() {
+      if (!db || !user || !isMemberOrOwner) return;
+
+      try {
+        const requestsRef = collection(db, 'requests');
+        const q = query(
+          requestsRef,
+          where('type', '==', 'place_delete'),
+          where('placeId', '==', placeId),
+          where('requestedBy', '==', user.uid),
+          where('status', '==', 'open'),
+          limit(1)
+        );
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
+          setHasOpenDeleteRequest(true);
+        }
+      } catch (error) {
+        console.error('Failed to check existing delete request:', error);
+      }
+    }
+
+    checkExistingDeleteRequest();
+  }, [placeId, user, isMemberOrOwner]);
+
+  // 등록자 닉네임 조회
+  async function fetchCreatorNickname(uid: string) {
+    try {
+      const response = await fetch(`/api/users/${uid}`);
+      if (response.ok) {
+        const data = await response.json();
+        setCreatorNickname(data.nickname || '알 수 없음');
+      } else {
+        setCreatorNickname('알 수 없음');
+      }
+    } catch (error) {
+      console.error('Failed to fetch creator nickname:', error);
+      setCreatorNickname('알 수 없음');
+    }
+  }
+
+  // 삭제 요청 제출
+  async function handleDeleteRequest() {
+    if (!confirm('이 장소의 삭제를 요청하시겠습니까? 관리자 승인 후 삭제됩니다.')) {
+      return;
+    }
+
+    if (!auth?.currentUser || !user) return;
+
+    setIsSubmittingRequest(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type: 'place_delete',
+          placeId,
+        }),
+      });
+
+      if (response.ok) {
+        alert('삭제 요청이 제출되었습니다. 관리자 승인을 기다려주세요.');
+        setHasOpenDeleteRequest(true);
+      } else {
+        const errorData = await response.json();
+        if (response.status === 409) {
+          alert('이미 삭제 요청을 제출하셨습니다.');
+          setHasOpenDeleteRequest(true);
+        } else {
+          alert(errorData.error || '삭제 요청에 실패했습니다.');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to submit delete request:', error);
+      alert('삭제 요청에 실패했습니다.');
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  }
 
   // 가장 많은 티어 계산
   function getTopTier(tierCounts: PlaceStats['tierCounts']): RatingTier | '-' {
@@ -145,7 +244,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
           {/* 통계 섹션 (모든 사용자에게 표시) */}
           <div className="border-t border-gray-100 bg-gray-50 px-6 py-4">
             <h3 className="text-sm font-medium text-gray-700 mb-3">통계</h3>
-            <div className="grid grid-cols-2 gap-4 text-center">
+            <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-gray-900">{stats?.reviewCount ?? '-'}</p>
                 <p className="text-xs text-gray-500">리뷰</p>
@@ -156,8 +255,31 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
                 </p>
                 <p className="text-xs text-gray-500">최다 등급</p>
               </div>
+              <div>
+                <p className="text-2xl font-bold text-green-600">{stats?.wishCount ?? 0}</p>
+                <p className="text-xs text-gray-500">💚 가고 싶어요</p>
+              </div>
             </div>
           </div>
+
+          {/* 삭제 요청 버튼 (member/owner) */}
+          {isMemberOrOwner && user && (
+            <div className="border-t border-gray-100 px-6 py-3">
+              {hasOpenDeleteRequest ? (
+                <p className="text-sm text-gray-500 text-center">
+                  삭제 요청이 제출되었습니다. 관리자 승인을 기다려주세요.
+                </p>
+              ) : (
+                <button
+                  onClick={handleDeleteRequest}
+                  disabled={isSubmittingRequest}
+                  className="w-full px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmittingRequest ? '요청 중...' : '삭제 요청'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* member/owner 전용 섹션 */}
@@ -205,7 +327,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
         <div className="text-xs text-gray-400 space-y-1">
           <p>장소 ID: {place.placeId}</p>
           <p>등록일: {place.createdAt.toLocaleDateString('ko-KR')}</p>
-          <p>출처: {place.source === 'naver_import' ? '네이버 지도 Import' : '직접 추가'}</p>
+          <p>등록자: {creatorNickname}</p>
         </div>
       </main>
     </div>

@@ -10,8 +10,6 @@ import {
   setDoc,
   updateDoc,
   serverTimestamp,
-  documentId,
-  arrayUnion,
 } from 'firebase/firestore';
 import { db } from './client';
 import { Place, RatingTier, PlaceStats } from '@/types';
@@ -56,8 +54,7 @@ export async function getRecentPlaces(limitCount: number = 50): Promise<Place[]>
       status: doc.data().status,
       mapProvider: doc.data().mapProvider,
       cellId: doc.data().cellId,
-      registeredBy: doc.data().registeredBy || [doc.data().createdBy], // 하위 호환
-      createdBy: doc.data().createdBy,
+            createdBy: doc.data().createdBy,
       createdAt: doc.data().createdAt?.toDate() || new Date(),
       updatedAt: doc.data().updatedAt?.toDate(),
     }));
@@ -98,8 +95,7 @@ export async function getPlaceById(placeId: string): Promise<Place | null> {
       status: data.status,
       mapProvider: data.mapProvider,
       cellId: data.cellId,
-      registeredBy: data.registeredBy || [data.createdBy],
-      createdBy: data.createdBy,
+      createdBy: data.createdBy || '',
       createdAt: data.createdAt?.toDate() || new Date(),
       updatedAt: data.updatedAt?.toDate(),
     };
@@ -112,14 +108,14 @@ export async function getPlaceById(placeId: string): Promise<Place | null> {
 /**
  * 장소 생성 (member/owner만)
  */
-export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt' | 'registeredBy'>) {
+export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt'>) {
   if (!db) {
     throw new Error('Firestore is not initialized');
   }
 
   const placeRef = doc(db, 'places', place.placeId);
 
-  // 이미 존재하는지 체크
+  // 이미 존재하는지 체크 (중복 등록 방지)
   const existing = await getDoc(placeRef);
   if (existing.exists()) {
     throw new Error('Place already exists');
@@ -130,23 +126,7 @@ export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt' |
     cellId: computeCellId(place.lat, place.lng),
     geohash: encodeGeohash(place.lat, place.lng),
     categoryKey: place.categoryKey || inferCategoryKey(place.category),
-    registeredBy: [place.createdBy], // 최초 등록자를 배열로 저장
     createdAt: serverTimestamp(),
-  });
-}
-
-/**
- * 기존 장소에 등록자 추가 (이미 등록된 장소를 다시 등록하는 경우)
- */
-export async function addRegistrant(placeId: string, uid: string) {
-  if (!db) {
-    throw new Error('Firestore is not initialized');
-  }
-
-  const placeRef = doc(db, 'places', placeId);
-  await updateDoc(placeRef, {
-    registeredBy: arrayUnion(uid),
-    updatedAt: serverTimestamp(),
   });
 }
 
@@ -236,8 +216,7 @@ export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
         status: docSnap.data().status,
         mapProvider: docSnap.data().mapProvider,
         cellId: docSnap.data().cellId,
-        registeredBy: docSnap.data().registeredBy || [docSnap.data().createdBy],
-        createdBy: docSnap.data().createdBy,
+        createdBy: docSnap.data().createdBy || '',
         createdAt: docSnap.data().createdAt?.toDate() || new Date(),
         updatedAt: docSnap.data().updatedAt?.toDate(),
       }));
@@ -328,8 +307,7 @@ export async function findNearbyPlaces(
           mapProvider: data.mapProvider,
           cellId: data.cellId,
           geohash: data.geohash,
-          registeredBy: data.registeredBy || [data.createdBy],
-          createdBy: data.createdBy,
+          createdBy: data.createdBy || '',
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
         });

@@ -115,6 +115,21 @@ service cloud.firestore {
         && resource.data.uid == request.auth.uid;
     }
 
+    // ---------- wishes ----------
+    match /wishes/{wishId} {
+      // member/owner만 read 가능
+      allow read: if isMemberOrOwner();
+
+      // 본인만 생성 가능
+      allow create: if isMemberOrOwner()
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.placeId is string;
+
+      // 본인만 수정/삭제 가능
+      allow update, delete: if isMemberOrOwner()
+        && resource.data.uid == request.auth.uid;
+    }
+
     // ---------- requests ----------
     match /requests/{requestId} {
       // member/owner만 (pending/guest 차단)
