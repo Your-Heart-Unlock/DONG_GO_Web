@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { db, storage } from '@/lib/firebase/client';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
 
 /**
  * DELETE /api/places/[placeId]/photos/[photoId]
@@ -14,7 +11,7 @@ export async function DELETE(
 ) {
   try {
     // 인증 확인
-    if (!adminAuth || !adminDb) {
+    if (!adminAuth || !adminDb || !adminStorage) {
       return NextResponse.json(
         { error: 'Firebase Admin not initialized' },
         { status: 500 }
@@ -45,25 +42,17 @@ export async function DELETE(
 
     const { placeId, photoId } = await params;
 
-    if (!db || !storage) {
-      return NextResponse.json(
-        { error: 'Firebase not initialized' },
-        { status: 500 }
-      );
-    }
-
     // 사진 정보 조회
-    const photoRef = doc(db, 'photos', photoId);
-    const photoSnap = await getDoc(photoRef);
+    const photoSnap = await adminDb.collection('photos').doc(photoId).get();
 
-    if (!photoSnap.exists()) {
+    if (!photoSnap.exists) {
       return NextResponse.json(
         { error: 'Photo not found' },
         { status: 404 }
       );
     }
 
-    const photoData = photoSnap.data();
+    const photoData = photoSnap.data()!;
 
     // 권한 체크: 본인이 업로드한 사진이거나 owner 역할
     if (photoData.uploadedBy !== decodedToken.uid && userData.role !== 'owner') {
@@ -75,15 +64,16 @@ export async function DELETE(
 
     // Storage에서 파일 삭제
     try {
-      const storageRef = ref(storage, `places/${placeId}/${photoData.fileName}`);
-      await deleteObject(storageRef);
+      const bucket = adminStorage.bucket();
+      const fileRef = bucket.file(`places/${placeId}/${photoData.fileName}`);
+      await fileRef.delete();
     } catch (storageError) {
       console.error('Storage delete error:', storageError);
       // Storage 삭제 실패해도 메타데이터는 삭제
     }
 
     // Firestore에서 메타데이터 삭제
-    await deleteDoc(photoRef);
+    await adminDb.collection('photos').doc(photoId).delete();
 
     return NextResponse.json({ success: true });
   } catch (error) {

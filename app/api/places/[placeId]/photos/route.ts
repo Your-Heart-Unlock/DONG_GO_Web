@@ -1,8 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
-import { db, storage } from '@/lib/firebase/client';
-import { collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
 
 /**
  * POST /api/places/[placeId]/photos
@@ -14,7 +11,7 @@ export async function POST(
 ) {
   try {
     // 인증 확인
-    if (!adminAuth || !adminDb) {
+    if (!adminAuth || !adminDb || !adminStorage) {
       return NextResponse.json(
         { error: 'Firebase Admin not initialized' },
         { status: 500 }
@@ -72,43 +69,35 @@ export async function POST(
       );
     }
 
-    if (!storage) {
-      return NextResponse.json(
-        { error: 'Storage not initialized' },
-        { status: 500 }
-      );
-    }
-
     // 파일명 생성 (타임스탬프 + 원본 파일명)
     const timestamp = Date.now();
     const sanitizedFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const fileName = `${timestamp}_${sanitizedFileName}`;
 
-    // Storage에 업로드
-    const storageRef = ref(storage, `places/${placeId}/${fileName}`);
-    const buffer = await file.arrayBuffer();
-    const uploadResult = await uploadBytes(storageRef, buffer, {
-      contentType: file.type,
+    // Admin SDK로 Storage에 업로드
+    const bucket = adminStorage.bucket();
+    const fileRef = bucket.file(`places/${placeId}/${fileName}`);
+    const buffer = Buffer.from(await file.arrayBuffer());
+
+    await fileRef.save(buffer, {
+      metadata: {
+        contentType: file.type,
+      },
     });
 
-    // 다운로드 URL 가져오기
-    const url = await getDownloadURL(uploadResult.ref);
+    // 파일을 공개 접근 가능하게 설정
+    await fileRef.makePublic();
 
-    if (!db) {
-      return NextResponse.json(
-        { error: 'Database not initialized' },
-        { status: 500 }
-      );
-    }
+    // 공개 URL 생성
+    const url = `https://storage.googleapis.com/${bucket.name}/places/${placeId}/${fileName}`;
 
-    // Firestore에 메타데이터 저장
-    const photosRef = collection(db, 'photos');
-    const photoDoc = await addDoc(photosRef, {
+    // Admin SDK로 Firestore에 메타데이터 저장
+    const photoDoc = await adminDb.collection('photos').add({
       placeId,
       url,
       fileName,
       uploadedBy: decodedToken.uid,
-      uploadedAt: serverTimestamp(),
+      uploadedAt: new Date(),
     });
 
     return NextResponse.json({
@@ -137,23 +126,27 @@ export async function GET(
   try {
     const { placeId } = await params;
 
-    if (!db) {
+    if (!adminDb) {
       return NextResponse.json(
-        { error: 'Database not initialized' },
+        { error: 'Firebase Admin not initialized' },
         { status: 500 }
       );
     }
 
-    const photosRef = collection(db, 'photos');
-    const q = query(photosRef, where('placeId', '==', placeId));
-    const snapshot = await getDocs(q);
+    const snapshot = await adminDb
+      .collection('photos')
+      .where('placeId', '==', placeId)
+      .get();
 
-    const photos = snapshot.docs.map((doc) => ({
-      photoId: doc.id,
-      url: doc.data().url,
-      uploadedBy: doc.data().uploadedBy,
-      uploadedAt: doc.data().uploadedAt?.toDate()?.toISOString() || new Date().toISOString(),
-    }));
+    const photos = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        photoId: doc.id,
+        url: data.url,
+        uploadedBy: data.uploadedBy,
+        uploadedAt: data.uploadedAt?.toDate()?.toISOString() || new Date().toISOString(),
+      };
+    });
 
     return NextResponse.json({ photos });
   } catch (error) {
