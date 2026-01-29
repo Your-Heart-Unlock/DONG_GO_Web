@@ -10,7 +10,7 @@ import { ref, deleteObject } from 'firebase/storage';
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { placeId: string; photoId: string } }
+  { params }: { params: Promise<{ placeId: string; photoId: string }> }
 ) {
   try {
     // 인증 확인
@@ -43,7 +43,7 @@ export async function DELETE(
       );
     }
 
-    const { placeId, photoId } = params;
+    const { placeId, photoId } = await params;
 
     if (!db || !storage) {
       return NextResponse.json(

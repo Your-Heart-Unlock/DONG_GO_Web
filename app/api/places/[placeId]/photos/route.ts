@@ -10,7 +10,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: { placeId: string } }
+  { params }: { params: Promise<{ placeId: string }> }
 ) {
   try {
     // 인증 확인
@@ -43,7 +43,7 @@ export async function POST(
       );
     }
 
-    const { placeId } = params;
+    const { placeId } = await params;
 
     // FormData에서 파일 추출
     const formData = await req.formData();
@@ -132,10 +132,10 @@ export async function POST(
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: { placeId: string } }
+  { params }: { params: Promise<{ placeId: string }> }
 ) {
   try {
-    const { placeId } = params;
+    const { placeId } = await params;
 
     if (!db) {
       return NextResponse.json(
