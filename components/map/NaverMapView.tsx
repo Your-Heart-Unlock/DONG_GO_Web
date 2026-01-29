@@ -14,7 +14,7 @@ export interface MapBounds {
 interface NaverMapViewProps {
   places: Place[];
   onMarkerClick?: (place: Place) => void;
-  onBoundsChange?: (bounds: MapBounds) => void;
+  onBoundsChange?: (bounds: MapBounds, zoom: number) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
   isFilterActive?: boolean; // 필터 활성화 여부
@@ -96,10 +96,21 @@ export default function NaverMapView({
     const map = new naver.maps.Map(mapRef.current, mapOptions);
     mapInstanceRef.current = map;
 
+    // 첫 초기화 여부 추적
+    let isFirstIdle = true;
+
     // idle 이벤트: zoom/pan 완료 후 발생
     naver.maps.Event.addListener(map, 'idle', () => {
       const bounds = getMapBounds(map);
-      onBoundsChangeRef.current?.(bounds);
+      const currentZoom = map.getZoom();
+
+      // 첫 idle 이벤트에서 무조건 bounds 변경 알림 (페이지 복귀 시 데이터 로드 보장)
+      if (isFirstIdle) {
+        isFirstIdle = false;
+        console.log('[NaverMapView] 지도 초기화 완료, bounds 로딩 시작');
+      }
+
+      onBoundsChangeRef.current?.(bounds, currentZoom);
       updateMarkerVisibility();
     });
   }, [isLoaded, center.lat, center.lng, zoom, updateMarkerVisibility]);

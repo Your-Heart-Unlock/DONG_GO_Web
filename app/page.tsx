@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/lib/firebase/auth';
@@ -10,6 +10,8 @@ import PlaceBottomSheet from '@/components/map/PlaceBottomSheet';
 import SearchBar from '@/components/map/SearchBar';
 import { getCellIdsForBounds } from '@/lib/utils/cellId';
 import { Place, FilterState } from '@/types';
+
+const MAP_STATE_STORAGE_KEY = 'donggo_map_state';
 
 export default function HomePage() {
   const { firebaseUser, user, loading } = useAuth();
@@ -22,10 +24,32 @@ export default function HomePage() {
   });
   const [currentBounds, setCurrentBounds] = useState<MapBounds | null>(null);
 
+  // 지도 상태 (줌, 중심 좌표)
+  const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.5665, lng: 126.978 });
+  const [mapZoom, setMapZoom] = useState<number>(12);
+
   // 클라이언트 캐시: 이미 로드된 placeId는 재요청하지 않음
   const loadedPlaceIdsRef = useRef<Set<string>>(new Set());
   // 이미 쿼리한 cellId 추적
   const loadedCellIdsRef = useRef<Set<string>>(new Set());
+
+  // 페이지 로드 시 저장된 지도 상태 복원
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const savedState = sessionStorage.getItem(MAP_STATE_STORAGE_KEY);
+    if (savedState) {
+      try {
+        const { center, zoom } = JSON.parse(savedState);
+        if (center?.lat && center?.lng && zoom) {
+          setMapCenter(center);
+          setMapZoom(zoom);
+        }
+      } catch (error) {
+        console.error('지도 상태 복원 실패:', error);
+      }
+    }
+  }, []);
 
   // Bounds 기반 장소 로딩 함수 (재사용 가능)
   const loadPlacesByBounds = useCallback(async (bounds: MapBounds) => {
@@ -62,9 +86,27 @@ export default function HomePage() {
     }
   }, []);
 
-  const handleBoundsChange = useCallback(async (bounds: MapBounds) => {
+  const handleBoundsChange = useCallback(async (bounds: MapBounds, zoom: number) => {
     // 현재 bounds 저장
     setCurrentBounds(bounds);
+
+    // 지도 중심 좌표 계산
+    const center = {
+      lat: (bounds.sw.lat + bounds.ne.lat) / 2,
+      lng: (bounds.sw.lng + bounds.ne.lng) / 2,
+    };
+
+    // 지도 상태를 sessionStorage에 저장
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.setItem(
+          MAP_STATE_STORAGE_KEY,
+          JSON.stringify({ center, zoom })
+        );
+      } catch (error) {
+        console.error('지도 상태 저장 실패:', error);
+      }
+    }
 
     // 필터가 활성화된 상태면 bounds 기반 로딩 스킵
     if (filterState.isActive) return;
@@ -239,6 +281,8 @@ export default function HomePage() {
           places={places}
           onMarkerClick={setSelectedPlace}
           onBoundsChange={handleBoundsChange}
+          center={mapCenter}
+          zoom={mapZoom}
           isFilterActive={filterState.isActive}
         />
 

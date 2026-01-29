@@ -7,6 +7,7 @@ import { getPlaceById } from '@/lib/firebase/places';
 import { getPlaceStats } from '@/lib/firebase/reviews';
 import { Place, PlaceStats, RatingTier, MapProvider } from '@/types';
 import ReviewList from '@/components/reviews/ReviewList';
+import PhotoGallery from '@/components/photos/PhotoGallery';
 
 interface PlaceDetailPageProps {
   params: Promise<{ placeId: string }>;
@@ -166,21 +167,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
             <ReviewList placeId={placeId} />
 
             {/* 사진 갤러리 섹션 */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">사진</h3>
-                <button
-                  disabled
-                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg opacity-50 cursor-not-allowed"
-                >
-                  사진 추가
-                </button>
-              </div>
-              <div className="text-center py-8 text-gray-500">
-                <p>아직 사진이 없습니다.</p>
-                <p className="text-sm mt-1">사진 기능은 추후 구현 예정입니다.</p>
-              </div>
-            </div>
+            <PhotoGallery placeId={placeId} />
           </>
         ) : (
           /* pending/guest 잠금 안내 */

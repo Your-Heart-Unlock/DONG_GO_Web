@@ -22,6 +22,14 @@ export type CategoryKey =
 
 export type IconGrade = 'S' | 'A' | 'B' | 'C' | 'F' | 'N';
 
+// Photo Types
+export interface Photo {
+  photoId: string; // 자동 생성 ID
+  url: string; // Storage URL
+  uploadedBy: string; // uid
+  uploadedAt: Date;
+}
+
 export interface Place {
   placeId: string; // 네이버 또는 카카오 지도 고유 ID
   name: string;
@@ -37,7 +45,9 @@ export interface Place {
   cellId?: string; // 그리드 cellId (bounds 기반 쿼리용)
   geohash?: string; // 좌표 기반 중복 체크용 (9자리)
   avgTier?: RatingTier | null; // 평균 등급 (마커 색상용, null=리뷰 없음)
-  createdBy: string; // uid
+  photos?: Photo[]; // 사진 목록 (조회 시 join)
+  registeredBy: string[]; // 이 장소를 등록한 사용자 uid 목록 (여러 명이 같은 장소 등록 가능)
+  createdBy: string; // 최초 등록자 uid (하위 호환)
   createdAt: Date;
   updatedAt?: Date;
 }

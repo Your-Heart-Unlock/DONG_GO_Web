@@ -11,6 +11,8 @@ export default function AdminDashboard() {
   const [migrating, setMigrating] = useState(false);
   const [geohashResult, setGeohashResult] = useState<string | null>(null);
   const [migratingGeohash, setMigratingGeohash] = useState(false);
+  const [registrantsResult, setRegistrantsResult] = useState<string | null>(null);
+  const [migratingRegistrants, setMigratingRegistrants] = useState(false);
 
   const handleMigrateCellId = async () => {
     if (!auth?.currentUser) {
@@ -59,6 +61,36 @@ export default function AdminDashboard() {
       setGeohashResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
     } finally {
       setMigratingGeohash(false);
+    }
+  };
+
+  const handleMigrateRegistrants = async () => {
+    if (!auth?.currentUser) {
+      setRegistrantsResult('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!confirm('모든 장소의 registeredBy를 훈동이 계정으로 설정합니다. 계속하시겠습니까?')) {
+      return;
+    }
+
+    setMigratingRegistrants(true);
+    setRegistrantsResult(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/migrate-registrants', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setRegistrantsResult(
+        `완료: 훈동 UID: ${data.hoondongUid}\n전체 ${data.total}개 / 업데이트 ${data.updated}개 / 스킵 ${data.skipped}개`
+      );
+    } catch (err) {
+      setRegistrantsResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setMigratingRegistrants(false);
     }
   };
 
@@ -177,7 +209,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* geohash 마이그레이션 */}
-        <div>
+        <div className="mb-6 pb-6 border-b border-gray-200">
           <h3 className="text-sm font-medium text-gray-800 mb-2">geohash 마이그레이션</h3>
           <p className="text-sm text-gray-600 mb-3">
             기존 장소 데이터에 geohash 필드를 추가합니다. (좌표 기반 중복 체크용)
@@ -192,6 +224,26 @@ export default function AdminDashboard() {
           {geohashResult && (
             <p className={`mt-3 text-sm ${geohashResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
               {geohashResult}
+            </p>
+          )}
+        </div>
+
+        {/* registeredBy 마이그레이션 */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-800 mb-2">등록자 데이터 설정 (테스트용)</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            모든 장소의 registeredBy를 훈동이 계정 UUID로 설정합니다. (테스트 데이터 초기화용)
+          </p>
+          <button
+            onClick={handleMigrateRegistrants}
+            disabled={migratingRegistrants}
+            className="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {migratingRegistrants ? '설정 중...' : '훈동이 계정으로 일괄 설정'}
+          </button>
+          {registrantsResult && (
+            <p className={`mt-3 text-sm whitespace-pre-line ${registrantsResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
+              {registrantsResult}
             </p>
           )}
         </div>
