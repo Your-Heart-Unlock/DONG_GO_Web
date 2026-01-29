@@ -2,7 +2,7 @@
 
 ## 🎯 현재 작업 우선순위 (주차별 계획)
 
-**업데이트: 2026-01-28**
+**업데이트: 2026-01-29**
 
 ### P0 - MVP 완성 (즉시, 1일)
 > **목표**: 보안 확정 + 기본 버그 수정
@@ -41,11 +41,18 @@
    - geohash 필드 추가 (Import 시 자동 생성)
    - 100m 이내 중복 장소 감지
 
-6. [ ] **사진 업로드 시스템** (H섹션) - 0.5d
+6. [ ] **카테고리 아이콘 마커** (W섹션) - 1d ⭐ 다음 작업
+   - CategoryKey / IconGrade 타입 정의
+   - Place.categoryKey 필드 추가 + 기존 category → categoryKey 매핑
+   - 지도 마커를 카테고리별 SVG 아이콘으로 교체 (72개 SVG 활용)
+   - 필터 UI에 카테고리 아이콘 적용
+   - REF: `REF_CATEGORIES_ICONS.md`
+
+7. [ ] **사진 업로드 시스템** (H섹션) - 0.5d
    - Firebase Storage 연동
    - 이미지 업로드/표시/삭제
 
-**완료 시**: 비용 절감 + 빠른 지도 + 필터로 빠르게 찾기 💰⚡
+**완료 시**: 비용 절감 + 빠른 지도 + 카테고리 아이콘으로 한눈에 파악 💰⚡
 
 ---
 
@@ -133,14 +140,10 @@
 
 ## 📅 추천 진행 순서
 
-**Week 0 (지금)**: P0 완료 → MVP 배포  
-**Week 1**: P1 완료 → 사용성 대폭 개선  
-**Week 2**: P2 완료 → 위시리스트 + 통계  
-**Week 3**: P3 완료 → 리더보드 + 뱃지로 재미  
-**Week 4**: P4 완료 → 최적화 + 품질
-🔥 비용 절감 (지도 최적화) + UX 개선  
-**Week 2**: P2 완료 → 위시리스트 + 통계  
-**Week 3**: P3 완료 → 리더보드 + 뱃지로 재미  
+**Week 0 (완료)**: P0 완료 → MVP 배포
+**Week 1 (진행중)**: P1 완료 → 지도 최적화 + 카테고리 아이콘 + 필터
+**Week 2**: P2 완료 → 위시리스트 + 통계
+**Week 3**: P3 완료 → 리더보드 + 뱃지로 재미
 **Week 4**: P4 완료 → 품질 체크
 
 → **1개월 후**: 완성도 높은 v1.0 완성! 🎊
@@ -477,6 +480,23 @@
 - [ ] 오프라인 페이지
 
 **상세**: `IMPL-V_PWA.md`
+
+---
+
+## W. 카테고리 아이콘 마커 시스템 (1d) → 상세: `REF_CATEGORIES_ICONS.md`
+- [ ] CategoryKey / IconGrade 타입 정의 (`types/index.ts`)
+  - [ ] `CategoryKey`: Korea | China | Japan | West | Asian | Snack | Meat | Sea | Cafe | Beer | Other | Idle
+  - [ ] `IconGrade`: S | A | B | C | F | N
+- [ ] `getCategoryIconPath()` 유틸 함수 (`lib/utils/categoryIcon.ts`)
+  - [ ] 파일명 매핑: Other → Others, Idle → Blank (실제 SVG 파일명 차이 처리)
+  - [ ] fallback: `Idle_N.svg`
+- [ ] Place 타입에 `categoryKey` 필드 추가 (선택적, 없으면 category에서 추정)
+- [ ] 카테고리 라벨 매핑 (CategoryKey → 한글)
+- [ ] NaverMapView 마커를 카테고리별 SVG 아이콘으로 교체
+  - [ ] `place.categoryKey` + `place.avgTier` → 적절한 SVG 선택
+  - [ ] avgTier 없으면 N grade 사용
+- [ ] 필터 UI에 카테고리 아이콘 적용 (선택)
+- [ ] 바텀시트/장소 상세에 카테고리 아이콘 표시 (선택)
 
 ---
 

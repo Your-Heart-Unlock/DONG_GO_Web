@@ -61,6 +61,7 @@ export async function GET(request: NextRequest) {
         lng: data.lng,
         category: data.category,
         categoryCode: data.categoryCode,
+        categoryKey: data.categoryKey,
         source: data.source,
         status: data.status,
         mapProvider: data.mapProvider,

@@ -14,6 +14,14 @@ export type PlaceSource = 'naver_import' | 'user_added';
 export type PlaceStatus = 'active' | 'hidden' | 'deleted';
 export type MapProvider = 'naver' | 'kakao';
 
+// Category & Icon Types
+export type CategoryKey =
+  | 'Korea' | 'China' | 'Japan' | 'West'
+  | 'Asian' | 'Snack' | 'Meat' | 'Sea'
+  | 'Cafe' | 'Beer' | 'Other' | 'Idle';
+
+export type IconGrade = 'S' | 'A' | 'B' | 'C' | 'F' | 'N';
+
 export interface Place {
   placeId: string; // 네이버 또는 카카오 지도 고유 ID
   name: string;
@@ -22,6 +30,7 @@ export interface Place {
   lng: number;
   category: string; // UI 표시용 (예: "음식점")
   categoryCode?: string; // 필터용 (예: "DINING")
+  categoryKey?: CategoryKey; // 카테고리 아이콘용 (예: "Korea")
   source: PlaceSource;
   status: PlaceStatus;
   mapProvider?: MapProvider; // 지도 제공자 (naver/kakao), 없으면 source로 추정
