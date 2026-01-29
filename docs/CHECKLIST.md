@@ -48,13 +48,13 @@
    - 필터 UI에 카테고리 아이콘 적용
    - REF: `REF_CATEGORIES_ICONS.md`
 
-7. [~] **사진 업로드 시스템** (H섹션) - 0.5d ⭐ 다음 작업 (70% 완료)
+7. [x] **사진 업로드 시스템** (H섹션) - 0.5d ✅ 완료
    - [x] Firebase Storage 연동 (storage.rules 배포 완료)
    - [x] Firestore photos 컬렉션 규칙 추가 (firestore.rules)
    - [x] API Routes: POST/GET/DELETE `/api/photos`
    - [x] PhotoGallery 컴포넌트 (업로드/표시/삭제 UI)
-   - [ ] 업로드 진행률 표시 (progress bar)
-   - [ ] 장소 상세 페이지에 PhotoGallery 연동 완성
+   - [x] 업로드 진행률 표시 (progress bar)
+   - [x] 장소 상세 페이지에 PhotoGallery 연동 완성
    - [ ] 드래그 앤 드롭 업로드 (선택)
 
 **완료 시**: 비용 절감 + 빠른 지도 + 카테고리 아이콘으로 한눈에 파악 💰⚡
@@ -64,13 +64,12 @@
 ### P2 - 핵심 신기능 (2주차, 3.5일)
 > **목표**: 위시리스트 + 통계로 몰입도 증가
 
-7. [ ] **위시리스트** (O섹션) - 1.5d
-   - "가고 싶어요" 버튼
-   - 내 위시리스트 페이지
-   - 친구들이 가고 싶어하는 곳 표시
+7. [x] **위시리스트** (O섹션) - 1.5d ✅ 핵심 완료
+   - "가고 싶어요" 버튼, 위시리스트 페이지, API, wishCount 추적 완료
+   - 부가 기능(프로필 탭, TOP 5 위젯, 그룹 위시) 미구현
 
-8. [ ] **개인 통계 대시보드** (P섹션) - 2d
-   - `/me/stats` 페이지
+8. [~] **개인 통계 대시보드** (P섹션) - 2d ⭐ 진행중
+   - `/me` 프로필 페이지 (위시리스트 + 통계 통합)
    - 리뷰/등급 분포 차트
    - 카테고리별 분석
 
@@ -115,13 +114,13 @@
 ### P5 - 운영 기능 (나중에, 3.5일)
 > **목표**: 관리자 편의 기능
 
-13. [ ] **요청 시스템** (I섹션) - 1.5d
-    - member의 수정/삭제 요청
-    - owner의 승인/거절
+13. [x] **요청 시스템** (I섹션) - 1.5d ✅ 삭제 요청 완료
+    - member의 삭제 요청 생성 + owner 승인/거절 완료
+    - 수정 요청은 미구현
 
-14. [ ] **Admin 장소 관리** (J섹션) - 1d
-    - `/admin/places`: hide/unhide
-    - `/admin/settings`: rating label 편집
+14. [~] **Admin 장소 관리** (J섹션) - 1d
+    - `/admin/places`: 삭제 요청 관리 (승인/거부) 완료
+    - `/admin/settings`: rating label 편집 - 미구현
 
 15. [ ] **알림 시스템** (U섹션) - 1d
     - 새 리뷰/장소 알림
@@ -218,7 +217,7 @@
 - [x] member/owner일 때만:
   - [x] 리뷰 리스트 표시 (ReviewList 컴포넌트)
   - [ ] 방문 기록 표시 - **미구현**
-  - [~] 사진 갤러리 표시 - **PhotoGallery 컴포넌트 구현, 상세 페이지 연동 진행중**
+  - [x] 사진 갤러리 표시 (PhotoGallery 컴포넌트 + 상세 페이지 연동 완료)
 - [x] pending/guest일 때:
   - [x] 리뷰/방문/사진 UI는 "잠금 상태"로 표시(안내 문구)
 - [x] **지도 링크 동적 처리** (mapProvider 필드 기반 네이버/카카오 자동 분기)
@@ -232,7 +231,7 @@
   - [x] 있으면 상세로 이동
 - [x] place 생성 시 최소 필드 검증
 - [x] 검색 페이지네이션 (10개씩)
-- [ ] **좌표 기반 중복 체크** (ID 다르지만 같은 위치 ~100m 이내 감지)
+- [x] **좌표 기반 중복 체크** (ID 다르지만 같은 위치 ~100m 이내 감지, geohash 기반)
 
 ---
 
@@ -241,29 +240,29 @@
 - [x] 리뷰 수정/삭제 (본인만, UI로 제어)
 - [x] 방문 정보 (visitedAt, companions, revisitIntent) 리뷰에 통합
 - [ ] 방문 기록 별도 컬렉션 (선택사항, 필요 시)
-- [~] 사진 업로드(Storage) - **API/UI 구현 완료, 진행률 표시 미완**
+- [x] 사진 업로드(Storage) - API/UI/진행률 표시 모두 완료
 - [x] stats 집계 업데이트 (recalculateStats 함수)
   - [x] reviewCount / tierCounts / topTags
 
 ---
 
-## I. 요청 시스템(수정/삭제 요청) (1.5d) → 상세: `IMPL-I_REQUEST_SYSTEM.md` - **전체 미구현**
+## I. 요청 시스템(수정/삭제 요청) (1.5d) → 상세: `IMPL-I_REQUEST_SYSTEM.md` - **삭제 요청 완료**
 - [ ] member가 place 수정 요청 생성(`/requests`)
-- [ ] member가 place 삭제 요청 생성
-- [ ] 요청 상태(open/approved/rejected) 조회 UI(간단)
+- [x] member가 place 삭제 요청 생성 (장소 상세 페이지에서 요청)
+- [x] 요청 상태(open/approved/rejected) 조회 UI (admin/places 페이지)
 
 ---
 
 ## J. Admin Console (owner only) (3~4d) → 상세: `IMPL-J_ADMIN_CONSOLE.md`
 - [x] `/admin` dashboard (기본 구조)
 - [x] `/admin/users`: pending → member 승인 (완전 구현)
-- [ ] `/admin/requests`: 요청 승인/거절 - **페이지 없음**
+- [x] `/admin/places`: 삭제 요청 관리 (요청 목록 + 승인/거부 UI)
 - [x] `/admin/import`: JSON import(dry-run → commit)
   - [x] 네이버 북마크 JSON 파싱
   - [x] Preview 화면 (OK/DUPLICATE/INVALID 분류)
   - [x] Commit API Route (batch 처리)
   - [x] admin_logs 기록
-- [ ] `/admin/places`: hide/unhide - **빈 페이지**
+- [x] `/admin/places`: 삭제 요청 리스트 + 승인/거부 (구현 완료)
 - [ ] `/admin/settings`: rating label mapping 편집 - **페이지 없음**
 
 ---
@@ -313,24 +312,24 @@
 
 ---
 
-## O. 위시리스트 시스템 (1.5d) - **신규**
-- [ ] Firestore 컬렉션 설계
-  - [ ] `wishes/{wishId}` 문서 생성
-  - [ ] placeId, uid, createdAt, note 필드
-- [ ] API Routes
-  - [ ] POST `/api/wishes` - 위시 추가
-  - [ ] DELETE `/api/wishes/{wishId}` - 위시 삭제
-  - [ ] GET `/api/wishes?uid={uid}` - 내 위시리스트
-  - [ ] GET `/api/wishes?placeId={placeId}` - 이 장소를 원하는 사람들
-- [ ] UI 구현
-  - [ ] PlaceBottomSheet에 "가고 싶어요" 버튼 (💚/🤍 토글)
+## O. 위시리스트 시스템 (1.5d) - **핵심 완료**
+- [x] Firestore 컬렉션 설계
+  - [x] `wishes/{wishId}` 문서 생성
+  - [x] placeId, uid, createdAt, note 필드
+- [x] API Routes
+  - [x] POST `/api/wishes` - 위시 추가
+  - [x] DELETE `/api/wishes/{wishId}` - 위시 삭제
+  - [x] GET `/api/wishes?uid={uid}` - 내 위시리스트
+  - [x] GET `/api/wishes?placeId={placeId}` - 이 장소를 원하는 사람들
+- [x] UI 구현
+  - [x] PlaceBottomSheet에 "가고 싶어요" 버튼 (💚/🤍 토글)
   - [ ] 장소 상세에 "OO님, OO님이 가고 싶어해요" 표시
-  - [ ] `/me/wishlist` 페이지 - 내 위시리스트 지도 뷰
+  - [x] `/me/wishlist` 페이지 - 내 위시리스트
   - [ ] 프로필에 "가고 싶어요 {count}개" 탭 추가
 - [ ] 홈 화면 위젯
   - [ ] "친구들이 가장 가고 싶어하는 곳 TOP 5"
   - [ ] "우리 모두가 가고 싶어하는 곳" 필터 (3명 모두 wish)
-- [ ] PlaceStats에 wishCount 필드 추가
+- [x] PlaceStats에 wishCount 필드 추가
 
 **상세**: `IMPL-O_WISHLIST.md`
 
