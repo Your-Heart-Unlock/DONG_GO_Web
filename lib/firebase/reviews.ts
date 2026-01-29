@@ -85,6 +85,7 @@ async function recalculateStats(placeId: string): Promise<void> {
 
   const tierCounts: PlaceStats['tierCounts'] = { S: 0, A: 0, B: 0, C: 0, F: 0 };
   const tagCounts: Record<string, number> = {};
+  const reviewerUidSet = new Set<string>();
 
   snapshot.docs.forEach((d) => {
     const data = d.data();
@@ -97,6 +98,9 @@ async function recalculateStats(placeId: string): Promise<void> {
         tagCounts[tag] = (tagCounts[tag] || 0) + 1;
       });
     }
+    if (data.uid) {
+      reviewerUidSet.add(data.uid);
+    }
   });
 
   // 상위 태그 5개
@@ -108,14 +112,15 @@ async function recalculateStats(placeId: string): Promise<void> {
   const statsRef = doc(db, 'stats', placeId);
   const statsSnap = await getDoc(statsRef);
 
-  const statsData: Partial<PlaceStats> & { reviewCount: number; tierCounts: PlaceStats['tierCounts']; topTags: string[] } = {
+  const statsData: PlaceStats = {
     reviewCount: snapshot.size,
     tierCounts,
     topTags,
+    reviewerUids: Array.from(reviewerUidSet),
   };
 
   if (statsSnap.exists()) {
-    await updateDoc(statsRef, statsData);
+    await updateDoc(statsRef, { ...statsData });
   } else {
     await setDoc(statsRef, statsData);
   }
@@ -220,6 +225,33 @@ export async function deleteReview(reviewId: string, placeId: string): Promise<v
 }
 
 /**
+ * 특정 사용자가 리뷰한 장소 placeId 목록 조회
+ * (지도에서 리뷰 여부 구분 시 사용)
+ */
+export async function getReviewedPlaceIds(uid: string): Promise<Set<string>> {
+  if (!db) {
+    console.warn('Firestore is not initialized');
+    return new Set();
+  }
+
+  try {
+    const reviewsRef = collection(db, 'reviews');
+    const q = query(reviewsRef, where('uid', '==', uid));
+    const snapshot = await getDocs(q);
+
+    const placeIds = new Set<string>();
+    snapshot.docs.forEach((d) => {
+      placeIds.add(d.data().placeId);
+    });
+
+    return placeIds;
+  } catch (error) {
+    console.error('Failed to fetch reviewed place IDs:', error);
+    return new Set();
+  }
+}
+
+/**
  * 장소 stats 가져오기
  */
 export async function getPlaceStats(placeId: string): Promise<PlaceStats | null> {
@@ -244,6 +276,7 @@ export async function getPlaceStats(placeId: string): Promise<PlaceStats | null>
       reviewCount: data.reviewCount || 0,
       tierCounts: data.tierCounts || { S: 0, A: 0, B: 0, C: 0, F: 0 },
       topTags: data.topTags || [],
+      reviewerUids: data.reviewerUids || [],
     };
   } catch (error) {
     console.error('Failed to fetch place stats:', error);

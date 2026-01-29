@@ -48,9 +48,14 @@
    - 필터 UI에 카테고리 아이콘 적용
    - REF: `REF_CATEGORIES_ICONS.md`
 
-7. [ ] **사진 업로드 시스템** (H섹션) - 0.5d ⭐ 다음 작업
-   - Firebase Storage 연동
-   - 이미지 업로드/표시/삭제
+7. [~] **사진 업로드 시스템** (H섹션) - 0.5d ⭐ 다음 작업 (70% 완료)
+   - [x] Firebase Storage 연동 (storage.rules 배포 완료)
+   - [x] Firestore photos 컬렉션 규칙 추가 (firestore.rules)
+   - [x] API Routes: POST/GET/DELETE `/api/photos`
+   - [x] PhotoGallery 컴포넌트 (업로드/표시/삭제 UI)
+   - [ ] 업로드 진행률 표시 (progress bar)
+   - [ ] 장소 상세 페이지에 PhotoGallery 연동 완성
+   - [ ] 드래그 앤 드롭 업로드 (선택)
 
 **완료 시**: 비용 절감 + 빠른 지도 + 카테고리 아이콘으로 한눈에 파악 💰⚡
 
@@ -213,7 +218,7 @@
 - [x] member/owner일 때만:
   - [x] 리뷰 리스트 표시 (ReviewList 컴포넌트)
   - [ ] 방문 기록 표시 - **미구현**
-  - [ ] 사진 갤러리 표시 - **UI만, 업로드 미구현**
+  - [~] 사진 갤러리 표시 - **PhotoGallery 컴포넌트 구현, 상세 페이지 연동 진행중**
 - [x] pending/guest일 때:
   - [x] 리뷰/방문/사진 UI는 "잠금 상태"로 표시(안내 문구)
 - [x] **지도 링크 동적 처리** (mapProvider 필드 기반 네이버/카카오 자동 분기)
@@ -236,7 +241,7 @@
 - [x] 리뷰 수정/삭제 (본인만, UI로 제어)
 - [x] 방문 정보 (visitedAt, companions, revisitIntent) 리뷰에 통합
 - [ ] 방문 기록 별도 컬렉션 (선택사항, 필요 시)
-- [ ] 사진 업로드(Storage) - **미구현**
+- [~] 사진 업로드(Storage) - **API/UI 구현 완료, 진행률 표시 미완**
 - [x] stats 집계 업데이트 (recalculateStats 함수)
   - [x] reviewCount / tierCounts / topTags
 

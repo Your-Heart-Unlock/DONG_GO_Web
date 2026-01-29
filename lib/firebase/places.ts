@@ -262,6 +262,7 @@ export async function getPlacesByCellIds(cellIds: string[]): Promise<Place[]> {
             reviewCount: data.reviewCount || 0,
             tierCounts: data.tierCounts || { S: 0, A: 0, B: 0, C: 0, F: 0 },
             topTags: data.topTags || [],
+            reviewerUids: data.reviewerUids || [],
           });
         }
       });

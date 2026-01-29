@@ -92,6 +92,7 @@ export interface PlaceStats {
     F: number;
   };
   topTags: string[];
+  reviewerUids: string[]; // 리뷰를 남긴 사용자 uid 목록
 }
 
 // Request Types

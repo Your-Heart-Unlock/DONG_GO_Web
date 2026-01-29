@@ -115,6 +115,25 @@ export default function NaverMapView({
     });
   }, [isLoaded, center.lat, center.lng, zoom, updateMarkerVisibility]);
 
+  // 지도 중심/줌 업데이트 (sessionStorage 복원 등 props 변경 시)
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+
+    const currentCenter = map.getCenter() as naver.maps.LatLng;
+    const currentZoom = map.getZoom();
+
+    const centerChanged =
+      Math.abs(currentCenter.lat() - center.lat) > 0.0001 ||
+      Math.abs(currentCenter.lng() - center.lng) > 0.0001;
+    const zoomChanged = currentZoom !== zoom;
+
+    if (centerChanged || zoomChanged) {
+      map.setCenter(new naver.maps.LatLng(center.lat, center.lng));
+      map.setZoom(zoom);
+    }
+  }, [center.lat, center.lng, zoom]);
+
   // 마커 렌더링 (증분 추가 + 불필요한 마커 제거)
   useEffect(() => {
     if (!mapInstanceRef.current || !isLoaded) return;

@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
         status: data.status,
         mapProvider: data.mapProvider,
         cellId: data.cellId,
+        registeredBy: data.registeredBy || [data.createdBy],
         createdBy: data.createdBy,
         createdAt: data.createdAt?.toDate?.() || new Date(),
         updatedAt: data.updatedAt?.toDate?.() || undefined,
@@ -104,6 +105,7 @@ export async function GET(request: NextRequest) {
             reviewCount: data?.reviewCount ?? 0,
             tierCounts: data?.tierCounts ?? { S: 0, A: 0, B: 0, C: 0, F: 0 },
             topTags: data?.topTags ?? [],
+            reviewerUids: data?.reviewerUids ?? [],
           });
         }
       });

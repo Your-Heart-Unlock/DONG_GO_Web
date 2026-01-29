@@ -130,6 +130,16 @@ service cloud.firestore {
       allow update, delete: if isOwner();
     }
 
+    // ---------- photos ----------
+    match /photos/{photoId} {
+      allow read: if true;                // 사진 URL은 공개
+      allow create: if isMemberOrOwner()
+        && request.resource.data.uploadedBy == request.auth.uid
+        && request.resource.data.placeId is string;
+      allow delete: if isMemberOrOwner()
+        && (resource.data.uploadedBy == request.auth.uid || isOwner());
+    }
+
     // ---------- admin logs ----------
     match /admin_logs/{logId} {
       allow read, write: if isOwner();
