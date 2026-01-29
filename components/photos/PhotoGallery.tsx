@@ -14,6 +14,8 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 사진 목록 로드
@@ -40,7 +42,11 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    await uploadFile(file);
+  }
 
+  // 실제 파일 업로드 로직 (재사용 가능)
+  async function uploadFile(file: File) {
     // 파일 크기 체크 (5MB)
     if (file.size > 5 * 1024 * 1024) {
       alert('파일 크기는 5MB 이하여야 합니다.');
@@ -53,32 +59,64 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
       return;
     }
 
+    if (!auth?.currentUser) {
+      alert('로그인이 필요합니다.');
+      return;
+    }
+
     setUploading(true);
+    setUploadProgress(0);
 
     try {
-      if (!auth?.currentUser) {
-        alert('로그인이 필요합니다.');
-        return;
-      }
-
       const token = await auth.currentUser.getIdToken();
       const formData = new FormData();
       formData.append('photo', file);
 
-      const response = await fetch(`/api/places/${placeId}/photos`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        body: formData,
+      // XMLHttpRequest를 사용하여 progress 추적
+      const xhr = new XMLHttpRequest();
+
+      // Progress 이벤트 리스너
+      xhr.upload.addEventListener('progress', (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = Math.round((e.loaded / e.total) * 100);
+          setUploadProgress(percentComplete);
+        }
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Upload failed');
-      }
+      // 업로드 완료 처리
+      const uploadPromise = new Promise<any>((resolve, reject) => {
+        xhr.addEventListener('load', () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const response = JSON.parse(xhr.responseText);
+              resolve(response);
+            } catch (error) {
+              reject(new Error('Failed to parse response'));
+            }
+          } else {
+            try {
+              const error = JSON.parse(xhr.responseText);
+              reject(new Error(error.error || 'Upload failed'));
+            } catch {
+              reject(new Error(`Upload failed with status ${xhr.status}`));
+            }
+          }
+        });
 
-      const newPhoto = await response.json();
+        xhr.addEventListener('error', () => {
+          reject(new Error('Network error'));
+        });
+
+        xhr.addEventListener('abort', () => {
+          reject(new Error('Upload cancelled'));
+        });
+      });
+
+      xhr.open('POST', `/api/places/${placeId}/photos`);
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+      xhr.send(formData);
+
+      const newPhoto = await uploadPromise;
       setPhotos([...photos, newPhoto]);
 
       // 파일 입력 초기화
@@ -90,6 +128,7 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
       alert('사진 업로드에 실패했습니다.');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
     }
   }
 
@@ -128,6 +167,39 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
     window.open(url, '_blank');
   }
 
+  // 드래그 앤 드롭 핸들러
+  function handleDragEnter(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find((file) => file.type.startsWith('image/'));
+
+    if (imageFile) {
+      await uploadFile(imageFile);
+    } else if (files.length > 0) {
+      alert('이미지 파일만 업로드 가능합니다.');
+    }
+  }
+
   if (loading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -163,10 +235,38 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
         </div>
       </div>
 
+      {/* 업로드 진행률 표시 */}
+      {uploading && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">업로드 중...</span>
+            <span className="text-sm font-medium text-blue-600">{uploadProgress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+            <div
+              className="bg-blue-600 h-2 transition-all duration-300 ease-out"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {photos.length === 0 ? (
-        <div className="text-center py-8 text-gray-500">
+        <div
+          className={`text-center py-12 border-2 border-dashed rounded-lg transition-colors ${
+            isDragging
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-300 hover:border-gray-400'
+          }`}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           <svg
-            className="w-12 h-12 mx-auto mb-3 text-gray-300"
+            className={`w-12 h-12 mx-auto mb-3 ${
+              isDragging ? 'text-blue-500' : 'text-gray-300'
+            }`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -178,11 +278,47 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
               d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
             />
           </svg>
-          <p>아직 사진이 없습니다.</p>
-          <p className="text-sm mt-1">사진 추가 버튼을 눌러 첫 사진을 업로드하세요.</p>
+          <p className={isDragging ? 'text-blue-600 font-medium' : 'text-gray-500'}>
+            {isDragging ? '이미지를 여기에 놓으세요' : '아직 사진이 없습니다.'}
+          </p>
+          {!isDragging && (
+            <p className="text-sm mt-1 text-gray-400">
+              사진 추가 버튼을 누르거나 이미지를 드래그하여 업로드하세요
+            </p>
+          )}
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div
+          className={`grid grid-cols-2 sm:grid-cols-3 gap-3 relative ${
+            isDragging ? 'ring-2 ring-blue-500 ring-offset-2 rounded-lg' : ''
+          }`}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* 드래그 오버레이 */}
+          {isDragging && (
+            <div className="absolute inset-0 bg-blue-50 bg-opacity-90 rounded-lg flex items-center justify-center z-10 pointer-events-none">
+              <div className="text-center">
+                <svg
+                  className="w-16 h-16 mx-auto mb-2 text-blue-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
+                  />
+                </svg>
+                <p className="text-blue-600 font-medium">이미지를 여기에 놓으세요</p>
+              </div>
+            </div>
+          )}
+
           {photos.map((photo) => (
             <div
               key={photo.photoId}

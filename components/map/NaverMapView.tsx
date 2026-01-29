@@ -62,6 +62,7 @@ export default function NaverMapView({
       markerMapRef.current.forEach((marker) => {
         marker.setVisible(true);
       });
+      console.log('[NaverMapView] 필터 모드: 모든 마커 표시');
       return;
     }
 
@@ -73,6 +74,12 @@ export default function NaverMapView({
     markerMapRef.current.forEach((marker) => {
       // 줌 아웃 과다 시에만 숨김
       marker.setVisible(!tooZoomedOut);
+    });
+
+    console.log('[NaverMapView] 마커 가시성 업데이트:', {
+      markerCount: markerMapRef.current.size,
+      tooZoomedOut,
+      visible: !tooZoomedOut
     });
   }, []);
 
@@ -96,23 +103,30 @@ export default function NaverMapView({
     const map = new naver.maps.Map(mapRef.current, mapOptions);
     mapInstanceRef.current = map;
 
-    // 첫 초기화 여부 추적
-    let isFirstIdle = true;
-
     // idle 이벤트: zoom/pan 완료 후 발생
     naver.maps.Event.addListener(map, 'idle', () => {
       const bounds = getMapBounds(map);
       const currentZoom = map.getZoom();
-
-      // 첫 idle 이벤트에서 무조건 bounds 변경 알림 (페이지 복귀 시 데이터 로드 보장)
-      if (isFirstIdle) {
-        isFirstIdle = false;
-        console.log('[NaverMapView] 지도 초기화 완료, bounds 로딩 시작');
-      }
-
       onBoundsChangeRef.current?.(bounds, currentZoom);
       updateMarkerVisibility();
     });
+
+    // 지도 초기화 직후 bounds 로딩 강제 트리거 (페이지 복귀 시 마커 복원)
+    console.log('[NaverMapView] 지도 생성 완료, 초기 데이터 로딩 시작', {
+      center: { lat: center.lat, lng: center.lng },
+      zoom,
+      placesCount: places.length
+    });
+    setTimeout(() => {
+      const bounds = getMapBounds(map);
+      const currentZoom = map.getZoom();
+      console.log('[NaverMapView] 초기 bounds 로딩 트리거:', {
+        bounds,
+        zoom: currentZoom,
+        onBoundsChangeExists: !!onBoundsChangeRef.current
+      });
+      onBoundsChangeRef.current?.(bounds, currentZoom);
+    }, 100);
   }, [isLoaded, center.lat, center.lng, zoom, updateMarkerVisibility]);
 
   // 지도 중심/줌 업데이트 (sessionStorage 복원 등 props 변경 시)
@@ -141,6 +155,11 @@ export default function NaverMapView({
     const map = mapInstanceRef.current;
     const currentPlaceIds = new Set(places.map(p => p.placeId));
 
+    console.log('[NaverMapView] 마커 렌더링 시작:', {
+      placesCount: places.length,
+      existingMarkersCount: markerMapRef.current.size
+    });
+
     // 1. places에 없는 마커 제거 (필터링 또는 장소 삭제 시)
     const markersToRemove: string[] = [];
     markerMapRef.current.forEach((marker, placeId) => {
@@ -150,8 +169,12 @@ export default function NaverMapView({
       }
     });
     markersToRemove.forEach(id => markerMapRef.current.delete(id));
+    if (markersToRemove.length > 0) {
+      console.log('[NaverMapView] 마커 제거됨:', markersToRemove.length);
+    }
 
     // 2. 새로운 장소의 마커 추가
+    let addedCount = 0;
     places.forEach((place) => {
       // 이미 생성된 마커는 스킵
       if (markerMapRef.current.has(place.placeId)) return;
@@ -177,10 +200,16 @@ export default function NaverMapView({
       });
 
       markerMapRef.current.set(place.placeId, marker);
+      addedCount++;
     });
+
+    if (addedCount > 0) {
+      console.log('[NaverMapView] 마커 추가됨:', addedCount);
+    }
 
     // 3. 마커 가시성 갱신
     updateMarkerVisibility();
+    console.log('[NaverMapView] 마커 렌더링 완료, 총 마커 수:', markerMapRef.current.size);
   }, [places, isLoaded, updateMarkerVisibility]);
 
   // Cleanup

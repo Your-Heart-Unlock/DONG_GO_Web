@@ -32,6 +32,10 @@ export default function HomePage() {
   const loadedPlaceIdsRef = useRef<Set<string>>(new Set());
   // 이미 쿼리한 cellId 추적
   const loadedCellIdsRef = useRef<Set<string>>(new Set());
+  // 초기 로딩이 완료되었는지 추적
+  const hasInitialLoadedRef = useRef(false);
+  // 지도 컴포넌트 재마운트를 위한 key
+  const [mapKey, setMapKey] = useState(0);
 
   // 페이지 로드 시 저장된 지도 상태 복원
   useEffect(() => {
@@ -42,8 +46,13 @@ export default function HomePage() {
       try {
         const { center, zoom } = JSON.parse(savedState);
         if (center?.lat && center?.lng && zoom) {
+          console.log('[HomePage] 지도 상태 복원:', { center, zoom });
           setMapCenter(center);
           setMapZoom(zoom);
+          // 복원 시에는 초기 로딩 플래그를 리셋하여 데이터 재로딩 강제
+          hasInitialLoadedRef.current = false;
+          // 지도 컴포넌트를 강제로 재마운트하여 초기화 로직 실행
+          setMapKey(prev => prev + 1);
         }
       } catch (error) {
         console.error('지도 상태 복원 실패:', error);
@@ -56,12 +65,19 @@ export default function HomePage() {
     const cellIds = getCellIdsForBounds(bounds);
 
     // cellIds가 null이면 줌이 너무 낮아서 쿼리 불가
-    if (!cellIds) return;
+    if (!cellIds) {
+      console.log('[HomePage] 줌 레벨 너무 낮음, 마커 표시 안 함');
+      return;
+    }
 
     // 이미 로드된 셀 제외
     const newCellIds = cellIds.filter((id) => !loadedCellIdsRef.current.has(id));
-    if (newCellIds.length === 0) return;
+    if (newCellIds.length === 0) {
+      console.log('[HomePage] 모든 셀 이미 로드됨, 스킵');
+      return;
+    }
 
+    console.log(`[HomePage] 새로운 셀 ${newCellIds.length}개 로딩 시작`);
     setLoadingPlaces(true);
 
     try {
@@ -78,15 +94,20 @@ export default function HomePage() {
       if (uniqueNewPlaces.length > 0) {
         uniqueNewPlaces.forEach((p) => loadedPlaceIdsRef.current.add(p.placeId));
         setPlaces((prev) => [...prev, ...uniqueNewPlaces]);
+        console.log(`[HomePage] ${uniqueNewPlaces.length}개 장소 추가, 총 ${loadedPlaceIdsRef.current.size}개`);
+      } else {
+        console.log('[HomePage] 새로운 장소 없음 (중복 제거 후)');
       }
     } catch (error) {
-      console.error('장소 로딩 실패:', error);
+      console.error('[HomePage] 장소 로딩 실패:', error);
     } finally {
       setLoadingPlaces(false);
     }
   }, []);
 
   const handleBoundsChange = useCallback(async (bounds: MapBounds, zoom: number) => {
+    console.log(`[HomePage] handleBoundsChange 호출됨, zoom: ${zoom}, 필터 활성: ${filterState.isActive}, 초기로드완료: ${hasInitialLoadedRef.current}`);
+
     // 현재 bounds 저장
     setCurrentBounds(bounds);
 
@@ -109,7 +130,19 @@ export default function HomePage() {
     }
 
     // 필터가 활성화된 상태면 bounds 기반 로딩 스킵
-    if (filterState.isActive) return;
+    if (filterState.isActive) {
+      console.log('[HomePage] 필터 활성화 상태, bounds 로딩 스킵');
+      return;
+    }
+
+    // 초기 로딩이 아직 안 된 경우 강제로 데이터 로드
+    if (!hasInitialLoadedRef.current) {
+      console.log('[HomePage] 초기 로딩 강제 실행');
+      hasInitialLoadedRef.current = true;
+      // 캐시 초기화하여 확실하게 데이터 로드
+      loadedCellIdsRef.current.clear();
+      loadedPlaceIdsRef.current.clear();
+    }
 
     await loadPlacesByBounds(bounds);
   }, [filterState.isActive, loadPlacesByBounds]);
@@ -137,6 +170,7 @@ export default function HomePage() {
       loadedPlaceIdsRef.current.clear();
       loadedCellIdsRef.current.clear();
       setPlaces([]);
+      hasInitialLoadedRef.current = false;
 
       // 현재 bounds가 있으면 즉시 재로드
       if (currentBounds) {
@@ -278,6 +312,7 @@ export default function HomePage() {
       {/* Map */}
       <div className="flex-1 relative">
         <NaverMapView
+          key={mapKey}
           places={places}
           onMarkerClick={setSelectedPlace}
           onBoundsChange={handleBoundsChange}
