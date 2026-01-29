@@ -3,7 +3,7 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
 
 /**
  * POST /api/admin/migrate-registrants
- * 모든 장소의 registeredBy를 훈동이 계정 UUID로 설정
+ * 모든 장소의 createdBy를 훈동이 계정 UUID로 설정 (createdBy가 없는 경우)
  */
 export async function POST(request: NextRequest) {
   try {
@@ -68,15 +68,15 @@ export async function POST(request: NextRequest) {
     for (const placeDoc of placesSnapshot.docs) {
       const data = placeDoc.data();
 
-      // 이미 registeredBy가 있고 훈동이 포함되어 있으면 스킵
-      if (data.registeredBy && data.registeredBy.includes(hoondongUid)) {
+      // 이미 createdBy가 있으면 스킵
+      if (data.createdBy) {
         skipped++;
         continue;
       }
 
-      // registeredBy를 [훈동 UID]로 설정
+      // createdBy를 훈동 UID로 설정
       batch.update(placeDoc.ref, {
-        registeredBy: [hoondongUid],
+        createdBy: hoondongUid,
         updatedAt: new Date(),
       });
 

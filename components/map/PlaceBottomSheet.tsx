@@ -1,6 +1,9 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { auth } from '@/lib/firebase/client';
 import { Place } from '@/types';
 
 interface PlaceBottomSheetProps {
@@ -10,12 +13,109 @@ interface PlaceBottomSheetProps {
 
 export default function PlaceBottomSheet({ place, onClose }: PlaceBottomSheetProps) {
   const router = useRouter();
+  const { user } = useAuth();
+  const [isWished, setIsWished] = useState(false);
+  const [wishId, setWishId] = useState<string | null>(null);
+  const [isTogglingWish, setIsTogglingWish] = useState(false);
+
+  // 위시 상태 확인
+  useEffect(() => {
+    if (!place || !user || !auth?.currentUser) {
+      setIsWished(false);
+      setWishId(null);
+      return;
+    }
+
+    checkWishStatus();
+  }, [place, user]);
+
+  async function checkWishStatus() {
+    if (!place || !user || !auth?.currentUser) return;
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch(
+        `/api/wishes?uid=${user.uid}&placeId=${place.placeId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.wishes && data.wishes.length > 0) {
+          setIsWished(true);
+          setWishId(data.wishes[0].wishId);
+        } else {
+          setIsWished(false);
+          setWishId(null);
+        }
+      }
+    } catch (error) {
+      console.error('Wish status check error:', error);
+    }
+  }
+
+  async function toggleWish() {
+    if (!place || !user || !auth?.currentUser || isTogglingWish) return;
+
+    setIsTogglingWish(true);
+
+    try {
+      const token = await auth.currentUser.getIdToken();
+
+      if (isWished && wishId) {
+        // 위시 삭제
+        const response = await fetch(`/api/wishes/${wishId}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.ok) {
+          setIsWished(false);
+          setWishId(null);
+        } else {
+          throw new Error('Failed to remove wish');
+        }
+      } else {
+        // 위시 추가
+        const response = await fetch('/api/wishes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ placeId: place.placeId }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setIsWished(true);
+          setWishId(data.wishId);
+        } else {
+          throw new Error('Failed to add wish');
+        }
+      }
+    } catch (error) {
+      console.error('Toggle wish error:', error);
+      alert('위시리스트 변경에 실패했습니다.');
+    } finally {
+      setIsTogglingWish(false);
+    }
+  }
 
   if (!place) return null;
 
   const handleViewDetail = () => {
     router.push(`/places/${place.placeId}`);
   };
+
+  // member/owner만 위시 기능 사용 가능
+  const canUseWish = user && (user.role === 'member' || user.role === 'owner');
 
   return (
     <>
@@ -75,6 +175,20 @@ export default function PlaceBottomSheet({ place, onClose }: PlaceBottomSheetPro
 
           {/* Actions */}
           <div className="flex gap-2 pt-2">
+            {canUseWish && (
+              <button
+                onClick={toggleWish}
+                disabled={isTogglingWish}
+                className={`px-4 py-3 border rounded-lg font-medium transition-colors disabled:opacity-50 ${
+                  isWished
+                    ? 'border-green-500 bg-green-50 text-green-700 hover:bg-green-100'
+                    : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                }`}
+                aria-label={isWished ? '위시리스트에서 제거' : '위시리스트에 추가'}
+              >
+                {isWished ? '💚' : '🤍'}
+              </button>
+            )}
             <button
               onClick={handleViewDetail}
               className="flex-1 py-3 px-4 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-colors"
