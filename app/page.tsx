@@ -2,18 +2,20 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { signOut } from '@/lib/firebase/auth';
 import { getPlacesByCellIds } from '@/lib/firebase/places';
 import NaverMapView, { MapBounds } from '@/components/map/NaverMapView';
 import PlaceBottomSheet from '@/components/map/PlaceBottomSheet';
-import SearchBar from '@/components/map/SearchBar';
+import SearchBar, { SearchResultItem } from '@/components/map/SearchBar';
 import { getCellIdsForBounds } from '@/lib/utils/cellId';
 import { Place, FilterState } from '@/types';
 
 const MAP_STATE_STORAGE_KEY = 'donggo_map_state';
 
 export default function HomePage() {
+  const router = useRouter();
   const { firebaseUser, user, loading } = useAuth();
   const [places, setPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
@@ -27,6 +29,12 @@ export default function HomePage() {
   // 지도 상태 (줌, 중심 좌표)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.5665, lng: 126.978 });
   const [mapZoom, setMapZoom] = useState<number>(12);
+
+  // 검색 상태
+  const [searchResults, setSearchResults] = useState<SearchResultItem[]>();
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [searchTotal, setSearchTotal] = useState<number>();
+  const pendingSelectRef = useRef<string | null>(null);
 
   // 클라이언트 캐시: 이미 로드된 placeId는 재요청하지 않음
   const loadedPlaceIdsRef = useRef<Set<string>>(new Set());
@@ -155,11 +163,53 @@ export default function HomePage() {
     }
   };
 
-  const handleSearch = (query: string) => {
-    // TODO: 네이버 지도 검색 API 연동 (나중에 구현)
-    console.log('Search query:', query);
-    alert('검색 기능은 추후 구현 예정입니다.');
-  };
+  // 검색 키워드 변경 → API 호출
+  const handleQueryChange = useCallback(async (query: string) => {
+    setSearchLoading(true);
+    try {
+      const response = await fetch(
+        `/api/places/search?keyword=${encodeURIComponent(query)}&limit=10`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        setSearchResults(data.places);
+        setSearchTotal(data.total);
+      }
+    } catch (error) {
+      console.error('[HomePage] Search error:', error);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, []);
+
+  // 검색 결과 클릭 → 지도 이동 + 바텀시트 표시
+  const handleResultClick = useCallback((result: SearchResultItem) => {
+    setMapCenter({ lat: result.lat, lng: result.lng });
+    setMapZoom(16);
+
+    const existingPlace = places.find((p) => p.placeId === result.placeId);
+    if (existingPlace) {
+      setSelectedPlace(existingPlace);
+    } else {
+      pendingSelectRef.current = result.placeId;
+    }
+  }, [places]);
+
+  // 검색 결과 없을 때 "식당 추가 검색하기" 클릭
+  const handleAddSearchClick = useCallback((query: string) => {
+    router.push(`/add?q=${encodeURIComponent(query)}`);
+  }, [router]);
+
+  // 검색 결과 클릭 후 places가 로드되면 바텀시트 자동 표시
+  useEffect(() => {
+    if (pendingSelectRef.current) {
+      const place = places.find((p) => p.placeId === pendingSelectRef.current);
+      if (place) {
+        setSelectedPlace(place);
+        pendingSelectRef.current = null;
+      }
+    }
+  }, [places]);
 
   const handleFilterChange = useCallback(async (newFilterState: FilterState) => {
     setFilterState(newFilterState);
@@ -325,9 +375,14 @@ export default function HomePage() {
       {/* Search Bar */}
       <div className="absolute top-20 left-4 right-4 z-20 max-w-md mx-auto">
         <SearchBar
-          onSearch={handleSearch}
           placeholder="맛집 검색..."
           onFilterChange={handleFilterChange}
+          searchResults={searchResults}
+          searchLoading={searchLoading}
+          searchTotal={searchTotal}
+          onResultClick={handleResultClick}
+          onAddSearchClick={handleAddSearchClick}
+          onQueryChange={handleQueryChange}
         />
       </div>
 

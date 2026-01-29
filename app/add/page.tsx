@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, useCallback, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { createPlace, getPlaceById, findNearbyPlaces } from '@/lib/firebase/places';
@@ -42,8 +42,9 @@ interface Pagination {
   hasMore: boolean;
 }
 
-export default function AddPlacePage() {
+function AddPlaceContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { firebaseUser, user, loading: authLoading } = useAuth();
 
   const [query, setQuery] = useState('');
@@ -56,11 +57,9 @@ export default function AddPlacePage() {
 
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
-  // 검색 실행 (새 검색)
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!query.trim() || query.trim().length < 2) {
+  // 검색 실행 (공통 로직)
+  const performSearch = useCallback(async (searchQuery: string) => {
+    if (!searchQuery.trim() || searchQuery.trim().length < 2) {
       setError('검색어는 2글자 이상 입력해주세요.');
       return;
     }
@@ -71,7 +70,7 @@ export default function AddPlacePage() {
     setPagination(null);
 
     try {
-      const response = await fetch(`/api/search/places?query=${encodeURIComponent(query)}&page=1`);
+      const response = await fetch(`/api/search/places?query=${encodeURIComponent(searchQuery)}&page=1`);
       const data = await response.json();
 
       if (!response.ok) {
@@ -89,6 +88,21 @@ export default function AddPlacePage() {
     } finally {
       setSearching(false);
     }
+  }, []);
+
+  // ?q= 파라미터로 자동 검색
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) {
+      setQuery(q);
+      performSearch(q);
+    }
+  }, [searchParams, performSearch]);
+
+  // 폼 제출
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(query);
   };
 
   // 더 보기
@@ -355,5 +369,19 @@ export default function AddPlacePage() {
         )}
       </main>
     </div>
+  );
+}
+
+export default function AddPlacePage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+          <p className="text-gray-500">로딩 중...</p>
+        </div>
+      }
+    >
+      <AddPlaceContent />
+    </Suspense>
   );
 }
