@@ -42,8 +42,8 @@ service cloud.firestore {
         && request.resource.data.nickname is string
         && request.resource.data.role == "pending";
 
-      // 본인 read 가능, owner는 운영상 read 가능
-      allow read: if isSelf(uid) || isOwner();
+      // member/owner는 read 가능 (리뷰 닉네임 조회 등)
+      allow read: if isMemberOrOwner();
 
       // 본인은 nickname 등만 수정 가능(역할(role)은 수정 금지)
       allow update: if isSelf(uid)
