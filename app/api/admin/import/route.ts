@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
 import { ImportRow, ImportDuplicatePolicy } from '@/types';
 import { computeCellId } from '@/lib/utils/cellId';
+import { inferCategoryKey } from '@/lib/utils/categoryIcon';
+import { encodeGeohash } from '@/lib/utils/geohash';
 
 /**
  * Admin Import API
@@ -94,7 +96,9 @@ export async function POST(request: NextRequest) {
                 lng: row.lng,
                 category: row.category,
                 categoryCode: row.categoryCode || '',
+                categoryKey: inferCategoryKey(row.category),
                 cellId: computeCellId(row.lat, row.lng),
+                geohash: encodeGeohash(row.lat, row.lng),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp(),
               });
               result.updated++;
@@ -112,10 +116,12 @@ export async function POST(request: NextRequest) {
               lng: row.lng,
               category: row.category,
               categoryCode: row.categoryCode || '',
+              categoryKey: inferCategoryKey(row.category),
               source: 'naver_import',
               status: 'active',
               mapProvider: 'naver',
               cellId: computeCellId(row.lat, row.lng),
+              geohash: encodeGeohash(row.lat, row.lng),
               createdBy: ownerUid,
               createdAt: admin.firestore.FieldValue.serverTimestamp(),
             });

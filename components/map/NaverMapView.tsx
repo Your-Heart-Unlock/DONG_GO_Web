@@ -17,6 +17,7 @@ interface NaverMapViewProps {
   onBoundsChange?: (bounds: MapBounds) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
+  isFilterActive?: boolean; // 필터 활성화 여부
 }
 
 /** 지도 인스턴스에서 현재 bounds 추출 */
@@ -34,6 +35,7 @@ export default function NaverMapView({
   onBoundsChange,
   center = { lat: 37.5665, lng: 126.978 }, // 서울 시청 기본값
   zoom = 12,
+  isFilterActive = false,
 }: NaverMapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<naver.maps.Map | null>(null);
@@ -42,38 +44,35 @@ export default function NaverMapView({
   // 콜백 ref (이벤트 리스너에서 최신 참조 사용)
   const onBoundsChangeRef = useRef(onBoundsChange);
   const onMarkerClickRef = useRef(onMarkerClick);
+  const isFilterActiveRef = useRef(isFilterActive);
 
   onBoundsChangeRef.current = onBoundsChange;
   onMarkerClickRef.current = onMarkerClick;
+  isFilterActiveRef.current = isFilterActive;
 
   const { isLoaded, error } = useNaverMaps();
 
-  // 마커 가시성 업데이트: 줌 아웃 시 숨김 + 뷰포트 밖 마커 숨김
+  // 마커 가시성 업데이트: 줌 레벨이 너무 낮을 때만 숨김
   const updateMarkerVisibility = useCallback(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
+    // 필터 모드에서는 모든 마커를 항상 표시
+    if (isFilterActiveRef.current) {
+      markerMapRef.current.forEach((marker) => {
+        marker.setVisible(true);
+      });
+      return;
+    }
+
+    // 일반 모드: 줌 레벨이 너무 낮을 때만 마커 숨김
     const mapBounds = getMapBounds(map);
-    // 셀 수가 30개 초과 (줌 아웃 과다) → 모든 마커 숨김
     const cellIds = getCellIdsForBounds(mapBounds);
     const tooZoomedOut = cellIds === null;
 
     markerMapRef.current.forEach((marker) => {
-      if (tooZoomedOut) {
-        marker.setVisible(false);
-        return;
-      }
-
-      // 뷰포트 안에 있는 마커만 표시
-      const pos = marker.getPosition() as naver.maps.LatLng;
-      const lat = pos.lat();
-      const lng = pos.lng();
-      const inBounds =
-        lat >= mapBounds.sw.lat &&
-        lat <= mapBounds.ne.lat &&
-        lng >= mapBounds.sw.lng &&
-        lng <= mapBounds.ne.lng;
-      marker.setVisible(inBounds);
+      // 줌 아웃 과다 시에만 숨김
+      marker.setVisible(!tooZoomedOut);
     });
   }, []);
 

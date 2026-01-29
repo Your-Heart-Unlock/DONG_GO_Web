@@ -18,7 +18,7 @@ export function computeCellId(lat: number, lng: number): string {
 
 /**
  * 지도 bounds를 커버하는 모든 cellId 반환
- * 줌 레벨 11 이상에서만 마커 표시 (약 50셀 이하)
+ * 줌 레벨 9 이상에서만 마커 표시 (약 100셀 이하)
  */
 export function getCellIdsForBounds(bounds: {
   sw: { lat: number; lng: number };
@@ -31,8 +31,8 @@ export function getCellIdsForBounds(bounds: {
 
   const cellCount = (maxCellLat - minCellLat + 1) * (maxCellLng - minCellLng + 1);
 
-  // 줌 레벨 11 이상에서만 마커 표시 (약 50셀 이하)
-  if (cellCount > 50) {
+  // 줌 레벨 9 이상에서만 마커 표시 (약 100셀 이하)
+  if (cellCount > 100) {
     return null;
   }
 

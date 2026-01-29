@@ -173,7 +173,7 @@ export interface SearchQuery {
   keyword?: string; // 장소 이름, 주소 검색
 
   // 카테고리
-  categories?: string[]; // ["한식", "일식", "카페"]
+  categories?: CategoryKey[]; // ["Korea", "Japan", "Cafe"]
 
   // 등급
   tiers?: RatingTier[]; // ["S", "A"]

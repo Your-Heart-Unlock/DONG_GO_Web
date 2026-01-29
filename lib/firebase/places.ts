@@ -21,6 +21,7 @@ import {
   calculateDistance,
   DUPLICATE_THRESHOLD_METERS,
 } from '@/lib/utils/geohash';
+import { inferCategoryKey } from '@/lib/utils/categoryIcon';
 
 /**
  * 최근 장소 N개 가져오기
@@ -125,6 +126,7 @@ export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt'>)
     ...place,
     cellId: computeCellId(place.lat, place.lng),
     geohash: encodeGeohash(place.lat, place.lng),
+    categoryKey: place.categoryKey || inferCategoryKey(place.category),
     createdAt: serverTimestamp(),
   });
 }

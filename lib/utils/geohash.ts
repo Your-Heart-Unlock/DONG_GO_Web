@@ -8,8 +8,8 @@ import geohash from 'ngeohash';
 // Geohash 정밀도 (9자리 = 약 5m x 5m)
 const GEOHASH_PRECISION = 9;
 
-// 중복 체크 거리 (미터)
-const DUPLICATE_DISTANCE_METERS = 100;
+// 중복 체크 거리 (미터) - 같은 건물 내 다른 가게는 보통 20-30m 이상 떨어짐
+const DUPLICATE_DISTANCE_METERS = 30;
 
 /**
  * 위경도를 geohash로 변환
@@ -62,7 +62,7 @@ function toRad(deg: number): number {
 }
 
 /**
- * 100m 이내 중복 체크를 위한 geohash prefix 반환
+ * 30m 이내 중복 체크를 위한 geohash prefix 반환
  * 7자리 prefix = 약 150m x 150m 영역
  */
 export function getGeohashPrefixForDuplicateCheck(lat: number, lng: number): string {

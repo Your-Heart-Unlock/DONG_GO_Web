@@ -35,6 +35,51 @@ export const ALL_CATEGORY_KEYS: CategoryKey[] = [
 ];
 
 /**
+ * 한글 카테고리명 → CategoryKey 역매핑
+ */
+const LABEL_TO_KEY: Record<string, CategoryKey> = Object.entries(CATEGORY_LABELS)
+  .reduce((acc, [key, label]) => {
+    acc[label] = key as CategoryKey;
+    return acc;
+  }, {} as Record<string, CategoryKey>);
+
+/**
+ * 한글 카테고리명을 CategoryKey로 변환
+ * @example labelToCategoryKey('한식') → 'Korea'
+ * @example labelToCategoryKey('unknown') → 'Idle'
+ */
+export function labelToCategoryKey(label: string): CategoryKey {
+  return LABEL_TO_KEY[label] || 'Idle';
+}
+
+/**
+ * 기존 category 문자열을 CategoryKey로 변환 (하위 호환)
+ * 네이버/카카오에서 받은 category 값을 최대한 매핑
+ */
+export function inferCategoryKey(category: string): CategoryKey {
+  const lower = category.toLowerCase();
+
+  // 한글 라벨 직접 매핑
+  if (LABEL_TO_KEY[category]) {
+    return LABEL_TO_KEY[category];
+  }
+
+  // 부분 문자열 매칭
+  if (lower.includes('한식') || lower.includes('korean')) return 'Korea';
+  if (lower.includes('중식') || lower.includes('chinese')) return 'China';
+  if (lower.includes('일식') || lower.includes('japanese')) return 'Japan';
+  if (lower.includes('양식') || lower.includes('western')) return 'West';
+  if (lower.includes('아시안') || lower.includes('동남아') || lower.includes('asian')) return 'Asian';
+  if (lower.includes('분식') || lower.includes('간편') || lower.includes('snack')) return 'Snack';
+  if (lower.includes('고기') || lower.includes('구이') || lower.includes('meat')) return 'Meat';
+  if (lower.includes('해산물') || lower.includes('횟집') || lower.includes('seafood')) return 'Sea';
+  if (lower.includes('카페') || lower.includes('디저트') || lower.includes('cafe') || lower.includes('dessert')) return 'Cafe';
+  if (lower.includes('술') || lower.includes('바') || lower.includes('beer') || lower.includes('bar')) return 'Beer';
+
+  return 'Other';
+}
+
+/**
  * RatingTier → IconGrade 변환 (null/undefined → 'N')
  */
 export function tierToIconGrade(tier: RatingTier | null | undefined): IconGrade {

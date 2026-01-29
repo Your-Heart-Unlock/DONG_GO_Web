@@ -239,6 +239,7 @@ export default function HomePage() {
           places={places}
           onMarkerClick={setSelectedPlace}
           onBoundsChange={handleBoundsChange}
+          isFilterActive={filterState.isActive}
         />
 
         {/* 필터 로딩 오버레이 */}

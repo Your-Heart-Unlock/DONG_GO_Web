@@ -41,14 +41,14 @@
    - geohash 필드 추가 (Import 시 자동 생성)
    - 100m 이내 중복 장소 감지
 
-6. [ ] **카테고리 아이콘 마커** (W섹션) - 1d ⭐ 다음 작업
+6. [x] **카테고리 아이콘 마커** (W섹션) - 1d
    - CategoryKey / IconGrade 타입 정의
    - Place.categoryKey 필드 추가 + 기존 category → categoryKey 매핑
    - 지도 마커를 카테고리별 SVG 아이콘으로 교체 (72개 SVG 활용)
    - 필터 UI에 카테고리 아이콘 적용
    - REF: `REF_CATEGORIES_ICONS.md`
 
-7. [ ] **사진 업로드 시스템** (H섹션) - 0.5d
+7. [ ] **사진 업로드 시스템** (H섹션) - 0.5d ⭐ 다음 작업
    - Firebase Storage 연동
    - 이미지 업로드/표시/삭제
 

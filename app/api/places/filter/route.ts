@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase/admin';
-import { Place, PlaceStats, SearchQuery, RatingTier } from '@/types';
+import { Place, PlaceStats, SearchQuery, RatingTier, CategoryKey } from '@/types';
+import { inferCategoryKey } from '@/lib/utils/categoryIcon';
 
 /**
  * Firestore에 저장된 장소 필터링 API
- * GET /api/places/filter?categories=한식,일식&tiers=S,A&...
+ * GET /api/places/filter?categories=Korea,Japan&tiers=S,A&...
  */
 export async function GET(request: NextRequest) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest) {
     const sortByParam = searchParams.get('sortBy');
     const query: SearchQuery = {
       keyword: searchParams.get('keyword') || undefined,
-      categories: searchParams.get('categories')?.split(',').filter(Boolean),
+      categories: searchParams.get('categories')?.split(',').filter(Boolean) as CategoryKey[] | undefined,
       tiers: searchParams.get('tiers')?.split(',').filter(Boolean) as RatingTier[] | undefined,
       regions: searchParams.get('regions')?.split(',').filter(Boolean),
       minReviews: searchParams.get('minReviews') ? parseInt(searchParams.get('minReviews')!) : undefined,
@@ -46,7 +47,7 @@ export async function GET(request: NextRequest) {
     // 10개 초과 시 클라이언트 필터링으로 처리
     const useCategoryFilter = query.categories && query.categories.length > 0 && query.categories.length <= 10;
     if (useCategoryFilter) {
-      placesQuery = placesQuery.where('category', 'in', query.categories);
+      placesQuery = placesQuery.where('categoryKey', 'in', query.categories);
     }
 
     // 3. 쿼리 실행
@@ -78,7 +79,11 @@ export async function GET(request: NextRequest) {
 
     // 카테고리 필터 (10개 초과 시 여기서 처리)
     if (query.categories && query.categories.length > 10) {
-      places = places.filter(p => query.categories!.includes(p.category));
+      places = places.filter(p => {
+        // categoryKey가 있으면 사용, 없으면 category에서 추론
+        const placeKey = p.categoryKey || inferCategoryKey(p.category);
+        return query.categories!.includes(placeKey);
+      });
       console.log('[Filter API] After category filter:', places.length);
     }
 

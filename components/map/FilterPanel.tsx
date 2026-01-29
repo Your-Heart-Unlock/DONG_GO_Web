@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { SearchQuery, FilterState, RatingTier } from '@/types';
+import { SearchQuery, FilterState, RatingTier, CategoryKey } from '@/types';
+import { CATEGORY_LABELS, ALL_CATEGORY_KEYS } from '@/lib/utils/categoryIcon';
 
 interface FilterPanelProps {
   isOpen: boolean;
@@ -9,18 +10,6 @@ interface FilterPanelProps {
   filterState: FilterState;
   onFilterChange: (state: FilterState) => void;
 }
-
-// 카테고리 목록 (실제 데이터에 맞게 조정 필요)
-const CATEGORIES = [
-  '한식',
-  '일식',
-  '중식',
-  '양식',
-  '카페',
-  '디저트',
-  '술집',
-  '기타',
-];
 
 // 지역 목록
 const REGIONS = [
@@ -125,15 +114,15 @@ export default function FilterPanel({
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
             {/* 카테고리 */}
             <FilterGroup label="카테고리">
-              {CATEGORIES.map(cat => (
+              {ALL_CATEGORY_KEYS.map(key => (
                 <Checkbox
-                  key={cat}
-                  label={`${cat}${counts.categories?.[cat] ? ` (${counts.categories[cat]})` : ''}`}
-                  checked={query.categories?.includes(cat) || false}
+                  key={key}
+                  label={`${CATEGORY_LABELS[key]}${counts.categories?.[key] ? ` (${counts.categories[key]})` : ''}`}
+                  checked={query.categories?.includes(key) || false}
                   onChange={(checked) => {
                     const categories = checked
-                      ? [...(query.categories || []), cat]
-                      : query.categories?.filter(c => c !== cat);
+                      ? [...(query.categories || []), key]
+                      : query.categories?.filter(c => c !== key);
                     setQuery({ ...query, categories });
                   }}
                 />

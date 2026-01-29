@@ -7,6 +7,23 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createPlace, getPlaceById, findNearbyPlaces } from '@/lib/firebase/places';
 import { MapProvider } from '@/types';
 
+/**
+ * 이름 유사도 체크 (간단한 정규화 후 비교)
+ */
+function isSimilarName(name1: string, name2: string): boolean {
+  const normalize = (str: string) =>
+    str
+      .toLowerCase()
+      .replace(/\s+/g, '') // 공백 제거
+      .replace(/[^\w가-힣]/g, ''); // 특수문자 제거
+
+  const n1 = normalize(name1);
+  const n2 = normalize(name2);
+
+  // 정확히 일치하거나 한쪽이 다른쪽을 포함하면 유사하다고 판단
+  return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+}
+
 interface SearchResult {
   placeId: string;
   name: string;
@@ -140,17 +157,24 @@ export default function AddPlacePage() {
         return;
       }
 
-      // 2. 좌표 기반 중복 체크 (100m 이내)
+      // 2. 좌표 기반 중복 체크 (30m 이내 + 이름 유사도)
       const nearbyPlaces = await findNearbyPlaces(place.lat, place.lng);
-      if (nearbyPlaces.length > 0) {
-        const nearbyPlace = nearbyPlaces[0];
+
+      // 이름이 유사한 근처 장소만 중복으로 판단
+      const similarNearbyPlaces = nearbyPlaces.filter((nearby) =>
+        isSimilarName(nearby.name, place.name)
+      );
+
+      if (similarNearbyPlaces.length > 0) {
+        const nearbyPlace = similarNearbyPlaces[0];
         const goToDetail = confirm(
-          `100m 이내에 "${nearbyPlace.name}"이(가) 이미 등록되어 있습니다.\n같은 장소인가요? 상세 페이지로 이동할까요?`
+          `30m 이내에 비슷한 이름의 "${nearbyPlace.name}"이(가) 이미 등록되어 있습니다.\n같은 장소인가요?\n\n확인: 상세 페이지로 이동\n취소: 그래도 추가하기`
         );
         if (goToDetail) {
           router.push(`/places/${nearbyPlace.placeId}`);
+          return;
         }
-        return;
+        // 취소를 누르면 계속 진행 (새로 추가)
       }
 
       // 신규 생성
