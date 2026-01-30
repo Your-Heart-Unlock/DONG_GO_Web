@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { auth } from '@/lib/firebase/client';
+import { auth, db } from '@/lib/firebase/client';
+import { doc, updateDoc } from 'firebase/firestore';
 import { RatingTier } from '@/types';
 
 interface RecentReview {
@@ -62,6 +63,11 @@ export default function ProfilePage() {
   const [reviews, setReviews] = useState<RecentReview[]>([]);
   const [hasMoreReviews, setHasMoreReviews] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // 닉네임 변경
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [newNickname, setNewNickname] = useState('');
+  const [savingNickname, setSavingNickname] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -121,6 +127,55 @@ export default function ProfilePage() {
       console.error('Load more reviews error:', err);
     } finally {
       setLoadingMore(false);
+    }
+  }
+
+  // 닉네임 변경 모드 시작
+  function startEditNickname() {
+    setNewNickname(user?.nickname || '');
+    setIsEditingNickname(true);
+  }
+
+  // 닉네임 변경 취소
+  function cancelEditNickname() {
+    setIsEditingNickname(false);
+    setNewNickname('');
+  }
+
+  // 닉네임 저장
+  async function saveNickname() {
+    if (!db || !user) return;
+
+    const trimmed = newNickname.trim();
+
+    // 유효성 검증
+    if (trimmed.length < 2 || trimmed.length > 20) {
+      alert('닉네임은 2~20자 사이로 입력해주세요.');
+      return;
+    }
+
+    if (trimmed === user.nickname) {
+      setIsEditingNickname(false);
+      return;
+    }
+
+    setSavingNickname(true);
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        nickname: trimmed,
+      });
+
+      alert('닉네임이 변경되었습니다.');
+      setIsEditingNickname(false);
+
+      // 페이지 새로고침하여 최신 데이터 반영
+      window.location.reload();
+    } catch (error) {
+      console.error('닉네임 변경 실패:', error);
+      alert('닉네임 변경에 실패했습니다.');
+    } finally {
+      setSavingNickname(false);
     }
   }
 
@@ -200,17 +255,58 @@ export default function ProfilePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-gray-900">{user.nickname}</h2>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadge.className}`}>
-                  {roleBadge.label}
-                </span>
-              </div>
-              {user.createdAt && (
-                <p className="text-sm text-gray-500 mt-1">
-                  가입일: {new Date(user.createdAt).toLocaleDateString('ko-KR')}
-                </p>
+            <div className="flex-1">
+              {isEditingNickname ? (
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={newNickname}
+                    onChange={(e) => setNewNickname(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="새 닉네임 (2~20자)"
+                    maxLength={20}
+                    disabled={savingNickname}
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={saveNickname}
+                      disabled={savingNickname}
+                      className="px-3 py-1.5 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {savingNickname ? '저장 중...' : '저장'}
+                    </button>
+                    <button
+                      onClick={cancelEditNickname}
+                      disabled={savingNickname}
+                      className="px-3 py-1.5 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-bold text-gray-900">{user.nickname}</h2>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${roleBadge.className}`}>
+                      {roleBadge.label}
+                    </span>
+                    <button
+                      onClick={startEditNickname}
+                      className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                      title="닉네임 변경"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  </div>
+                  {user.createdAt && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      가입일: {new Date(user.createdAt).toLocaleDateString('ko-KR')}
+                    </p>
+                  )}
+                </div>
               )}
             </div>
           </div>

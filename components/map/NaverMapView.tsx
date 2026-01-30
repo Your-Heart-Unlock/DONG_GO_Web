@@ -41,6 +41,8 @@ export default function NaverMapView({
   const mapInstanceRef = useRef<naver.maps.Map | null>(null);
   // placeId → marker 매핑 (캐싱 유지)
   const markerMapRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  // 마커 클러스터링 인스턴스
+  const markerClusterRef = useRef<any>(null);
   // 콜백 ref (이벤트 리스너에서 최신 참조 사용)
   const onBoundsChangeRef = useRef(onBoundsChange);
   const onMarkerClickRef = useRef(onMarkerClick);
@@ -52,10 +54,16 @@ export default function NaverMapView({
 
   const { isLoaded, error } = useNaverMaps();
 
-  // 마커 가시성 업데이트: 줌 레벨이 너무 낮을 때만 숨김
+  // 마커 가시성 업데이트: 줌 레벨이 너무 낮을 때만 숨김 (클러스터 미사용 시만)
   const updateMarkerVisibility = useCallback(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
+
+    // 클러스터가 있으면 클러스터가 마커 가시성을 관리하므로 스킵
+    if (markerClusterRef.current) {
+      console.log('[NaverMapView] 클러스터 모드: 마커 가시성은 클러스터가 관리');
+      return;
+    }
 
     // 필터 모드에서는 모든 마커를 항상 표시
     if (isFilterActiveRef.current) {
@@ -102,6 +110,34 @@ export default function NaverMapView({
 
     const map = new naver.maps.Map(mapRef.current, mapOptions);
     mapInstanceRef.current = map;
+
+    // MarkerClustering 초기화
+    if (naver.maps.MarkerClustering) {
+      console.log('[NaverMapView] MarkerClustering 사용 가능, 초기화 중...');
+      const htmlMarker = {
+        content: '<div style="cursor:pointer;width:40px;height:40px;line-height:42px;font-size:12px;color:white;text-align:center;font-weight:bold;background:url(https://navermaps.github.io/maps.js.ncp/docs/img/cluster-marker-1.png);background-size:contain;"></div>',
+        size: new naver.maps.Size(40, 40),
+        anchor: new naver.maps.Point(20, 20)
+      };
+
+      markerClusterRef.current = new naver.maps.MarkerClustering({
+        minClusterSize: 2,
+        maxZoom: 14,
+        map: map,
+        markers: [],
+        disableClickZoom: false,
+        gridSize: 120,
+        icons: [htmlMarker],
+        indexGenerator: [10, 100, 200, 500, 1000],
+        stylingFunction: (clusterMarker: any, count: number) => {
+          const element = clusterMarker.getElement();
+          element.querySelector('div').textContent = count;
+        }
+      });
+      console.log('[NaverMapView] MarkerClustering 초기화 완료');
+    } else {
+      console.log('[NaverMapView] MarkerClustering 사용 불가, 일반 마커 사용');
+    }
 
     // idle 이벤트: zoom/pan 완료 후 발생
     naver.maps.Event.addListener(map, 'idle', () => {
@@ -175,6 +211,8 @@ export default function NaverMapView({
 
     // 2. 새로운 장소의 마커 추가
     let addedCount = 0;
+    const useCluster = !!markerClusterRef.current;
+
     places.forEach((place) => {
       // 이미 생성된 마커는 스킵
       if (markerMapRef.current.has(place.placeId)) return;
@@ -184,7 +222,7 @@ export default function NaverMapView({
 
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(place.lat, place.lng),
-        map,
+        map: useCluster ? null : map, // 클러스터가 있으면 null, 없으면 map에 직접 추가
         title: place.name,
         clickable: true,
         icon: {
@@ -204,19 +242,34 @@ export default function NaverMapView({
     });
 
     if (addedCount > 0) {
-      console.log('[NaverMapView] 마커 추가됨:', addedCount);
+      console.log('[NaverMapView] 마커 추가됨:', addedCount, useCluster ? '(클러스터 사용)' : '(직접 표시)');
     }
 
-    // 3. 마커 가시성 갱신
-    updateMarkerVisibility();
+    // 3. 클러스터 업데이트 또는 마커 가시성 갱신
+    if (markerClusterRef.current) {
+      const allMarkers = Array.from(markerMapRef.current.values());
+      markerClusterRef.current.setMarkers(allMarkers);
+      console.log('[NaverMapView] 클러스터 업데이트:', allMarkers.length, '개 마커');
+    } else {
+      // 클러스터링이 없으면 기존 방식대로 마커 가시성 갱신
+      updateMarkerVisibility();
+    }
+
     console.log('[NaverMapView] 마커 렌더링 완료, 총 마커 수:', markerMapRef.current.size);
   }, [places, isLoaded, updateMarkerVisibility]);
 
   // Cleanup
   useEffect(() => {
     return () => {
+      // 클러스터 정리
+      if (markerClusterRef.current) {
+        markerClusterRef.current.setMap(null);
+        markerClusterRef.current = null;
+      }
+      // 마커 정리
       markerMapRef.current.forEach((marker) => marker.setMap(null));
       markerMapRef.current.clear();
+      // 지도 정리
       if (mapInstanceRef.current) {
         mapInstanceRef.current.destroy();
         mapInstanceRef.current = null;

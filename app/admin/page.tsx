@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase/client';
+
+interface AdminStats {
+  totalPlaces: number;
+  totalReviews: number;
+  pendingUsers: number;
+  openRequests: number;
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -13,6 +20,8 @@ export default function AdminDashboard() {
   const [migratingGeohash, setMigratingGeohash] = useState(false);
   const [registrantsResult, setRegistrantsResult] = useState<string | null>(null);
   const [migratingRegistrants, setMigratingRegistrants] = useState(false);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const handleMigrateCellId = async () => {
     if (!auth?.currentUser) {
@@ -94,6 +103,34 @@ export default function AdminDashboard() {
     }
   };
 
+  // 통계 가져오기
+  useEffect(() => {
+    async function fetchStats() {
+      if (!auth?.currentUser || !user || user.role !== 'owner') return;
+
+      setStatsLoading(true);
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/admin/stats', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        } else {
+          console.error('Failed to fetch stats');
+        }
+      } catch (error) {
+        console.error('Fetch stats error:', error);
+      } finally {
+        setStatsLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, [user]);
+
   return (
     <div className="space-y-8">
       <div>
@@ -158,30 +195,41 @@ export default function AdminDashboard() {
         </Link>
       </div>
 
-      {/* Stats (Coming Soon) */}
+      {/* Stats */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">현황 요약</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.totalPlaces ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">전체 장소</p>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.totalReviews ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">전체 리뷰</p>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+          <Link
+            href="/admin/users"
+            className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.pendingUsers ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">Pending 사용자</p>
-          </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+          </Link>
+          <Link
+            href="/admin/requests"
+            className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.openRequests ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">열린 요청</p>
-          </div>
+          </Link>
         </div>
-        <p className="text-xs text-gray-500 mt-4 text-center">
-          통계 기능은 추후 구현 예정
-        </p>
       </div>
 
       {/* 데이터 마이그레이션 */}

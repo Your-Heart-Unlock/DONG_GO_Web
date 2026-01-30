@@ -37,10 +37,10 @@ export function useNaverMaps() {
       return;
     }
 
-    // 스크립트 동적 로드
+    // 스크립트 동적 로드 (clustering 서브모듈 포함)
     const script = document.createElement('script');
     script.id = SCRIPT_ID;
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=clustering`;
     script.async = true;
     script.defer = true;
 

@@ -62,6 +62,12 @@ export default function AdminUsersPage() {
     const user = users.find((u) => u.uid === uid);
     if (!user) return;
 
+    // robotukjong@gmail.com은 Owner 강등 불가
+    if (user.email === 'robotukjong@gmail.com' && user.role === 'owner' && newRole !== 'owner') {
+      alert('이 계정은 Owner 권한을 변경할 수 없습니다.');
+      return;
+    }
+
     const confirmed = confirm(
       `${user.nickname || user.email}의 역할을 "${user.role}" → "${newRole}"로 변경하시겠습니까?`
     );
@@ -286,22 +292,37 @@ export default function AdminUsersPage() {
                             </button>
                           )}
                           {user.role === 'member' && (
-                            <button
-                              onClick={() => handleRoleChange(user.uid, 'pending')}
-                              disabled={updating === user.uid}
-                              className="px-3 py-1 text-xs font-medium text-white bg-yellow-600 rounded hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                            >
-                              {updating === user.uid ? '처리중...' : '강등'}
-                            </button>
+                            <>
+                              <button
+                                onClick={() => handleRoleChange(user.uid, 'pending')}
+                                disabled={updating === user.uid}
+                                className="px-3 py-1 text-xs font-medium text-white bg-yellow-600 rounded hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                              >
+                                {updating === user.uid ? '처리중...' : '강등'}
+                              </button>
+                              <button
+                                onClick={() => handleRoleChange(user.uid, 'owner')}
+                                disabled={updating === user.uid}
+                                className="px-3 py-1 text-xs font-medium text-purple-600 border border-purple-600 rounded hover:bg-purple-50 disabled:border-gray-300 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
+                              >
+                                Owner 지정
+                              </button>
+                            </>
                           )}
-                          {user.role !== 'owner' && (
-                            <button
-                              onClick={() => handleRoleChange(user.uid, 'owner')}
-                              disabled={updating === user.uid}
-                              className="px-3 py-1 text-xs font-medium text-purple-600 border border-purple-600 rounded hover:bg-purple-50 disabled:border-gray-300 disabled:text-gray-300 disabled:cursor-not-allowed transition-colors"
-                            >
-                              Owner 지정
-                            </button>
+                          {user.role === 'owner' && (
+                            user.email === 'robotukjong@gmail.com' ? (
+                              <span className="px-3 py-1 text-xs font-medium text-gray-400 bg-gray-100 rounded cursor-not-allowed" title="보호된 계정">
+                                강등 불가
+                              </span>
+                            ) : (
+                              <button
+                                onClick={() => handleRoleChange(user.uid, 'member')}
+                                disabled={updating === user.uid}
+                                className="px-3 py-1 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                              >
+                                {updating === user.uid ? '처리중...' : 'Member로 강등'}
+                              </button>
+                            )
                           )}
                         </div>
                       </td>
