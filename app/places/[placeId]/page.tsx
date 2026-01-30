@@ -24,12 +24,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
   const [error, setError] = useState('');
   const [creatorNickname, setCreatorNickname] = useState<string>('로딩 중...');
   const [hasOpenDeleteRequest, setHasOpenDeleteRequest] = useState(false);
-  const [hasOpenEditRequest, setHasOpenEditRequest] = useState(false);
   const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deleteReason, setDeleteReason] = useState('');
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [newCategory, setNewCategory] = useState('');
 
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
@@ -66,16 +61,14 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
     fetchPlace();
   }, [placeId]);
 
-  // 기존 요청 확인 (삭제 & 수정)
+  // 기존 삭제 요청 확인
   useEffect(() => {
-    async function checkExistingRequests() {
+    async function checkExistingDeleteRequest() {
       if (!db || !user || !isMemberOrOwner) return;
 
       try {
         const requestsRef = collection(db, 'requests');
-
-        // 삭제 요청 확인
-        const deleteQuery = query(
+        const q = query(
           requestsRef,
           where('type', '==', 'place_delete'),
           where('placeId', '==', placeId),
@@ -83,30 +76,16 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
           where('status', '==', 'open'),
           limit(1)
         );
-        const deleteSnapshot = await getDocs(deleteQuery);
-        if (!deleteSnapshot.empty) {
+        const snapshot = await getDocs(q);
+        if (!snapshot.empty) {
           setHasOpenDeleteRequest(true);
         }
-
-        // 수정 요청 확인
-        const editQuery = query(
-          requestsRef,
-          where('type', '==', 'place_edit'),
-          where('placeId', '==', placeId),
-          where('requestedBy', '==', user.uid),
-          where('status', '==', 'open'),
-          limit(1)
-        );
-        const editSnapshot = await getDocs(editQuery);
-        if (!editSnapshot.empty) {
-          setHasOpenEditRequest(true);
-        }
       } catch (error) {
-        console.error('Failed to check existing requests:', error);
+        console.error('Failed to check existing delete request:', error);
       }
     }
 
-    checkExistingRequests();
+    checkExistingDeleteRequest();
   }, [placeId, user, isMemberOrOwner]);
 
   // 등록자 닉네임 조회
@@ -127,8 +106,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
 
   // 삭제 요청 제출
   async function handleDeleteRequest() {
-    if (!deleteReason.trim()) {
-      alert('삭제 사유를 입력해주세요.');
+    if (!confirm('이 장소의 삭제를 요청하시겠습니까? 관리자 승인 후 삭제됩니다.')) {
       return;
     }
 
@@ -146,23 +124,17 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
         body: JSON.stringify({
           type: 'place_delete',
           placeId,
-          payload: {
-            reason: deleteReason,
-          },
         }),
       });
 
       if (response.ok) {
         alert('삭제 요청이 제출되었습니다. 관리자 승인을 기다려주세요.');
         setHasOpenDeleteRequest(true);
-        setShowDeleteModal(false);
-        setDeleteReason('');
       } else {
         const errorData = await response.json();
         if (response.status === 409) {
           alert('이미 삭제 요청을 제출하셨습니다.');
           setHasOpenDeleteRequest(true);
-          setShowDeleteModal(false);
         } else {
           alert(errorData.error || '삭제 요청에 실패했습니다.');
         }
@@ -170,57 +142,6 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
     } catch (error) {
       console.error('Failed to submit delete request:', error);
       alert('삭제 요청에 실패했습니다.');
-    } finally {
-      setIsSubmittingRequest(false);
-    }
-  }
-
-  // 카테고리 수정 요청 제출
-  async function handleEditRequest() {
-    if (!newCategory.trim()) {
-      alert('새 카테고리를 입력해주세요.');
-      return;
-    }
-
-    if (!auth?.currentUser || !user || !place) return;
-
-    setIsSubmittingRequest(true);
-    try {
-      const token = await auth.currentUser.getIdToken();
-      const response = await fetch('/api/requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          type: 'place_edit',
-          placeId,
-          payload: {
-            category: newCategory,
-            oldCategory: place.category,
-          },
-        }),
-      });
-
-      if (response.ok) {
-        alert('카테고리 수정 요청이 제출되었습니다. 관리자 승인을 기다려주세요.');
-        setHasOpenEditRequest(true);
-        setShowEditModal(false);
-        setNewCategory('');
-      } else {
-        const errorData = await response.json();
-        if (response.status === 409) {
-          alert('이미 수정 요청을 제출하셨습니다.');
-          setHasOpenEditRequest(true);
-          setShowEditModal(false);
-        } else {
-          alert(errorData.error || '수정 요청에 실패했습니다.');
-        }
-      }
-    } catch (error) {
-      console.error('Failed to submit edit request:', error);
-      alert('수정 요청에 실패했습니다.');
     } finally {
       setIsSubmittingRequest(false);
     }
@@ -341,34 +262,20 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
             </div>
           </div>
 
-          {/* 요청 버튼들 (member/owner) */}
+          {/* 삭제 요청 버튼 (member/owner) */}
           {isMemberOrOwner && user && (
-            <div className="border-t border-gray-100 px-6 py-3 space-y-2">
-              {/* 카테고리 수정 요청 */}
-              {hasOpenEditRequest ? (
-                <p className="text-sm text-gray-500 text-center">
-                  카테고리 수정 요청이 제출되었습니다.
-                </p>
-              ) : (
-                <button
-                  onClick={() => setShowEditModal(true)}
-                  className="w-full px-4 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
-                >
-                  카테고리 수정 요청
-                </button>
-              )}
-
-              {/* 삭제 요청 */}
+            <div className="border-t border-gray-100 px-6 py-3">
               {hasOpenDeleteRequest ? (
                 <p className="text-sm text-gray-500 text-center">
-                  삭제 요청이 제출되었습니다.
+                  삭제 요청이 제출되었습니다. 관리자 승인을 기다려주세요.
                 </p>
               ) : (
                 <button
-                  onClick={() => setShowDeleteModal(true)}
-                  className="w-full px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors"
+                  onClick={handleDeleteRequest}
+                  disabled={isSubmittingRequest}
+                  className="w-full px-4 py-2 text-sm text-red-600 border border-red-200 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  삭제 요청
+                  {isSubmittingRequest ? '요청 중...' : '삭제 요청'}
                 </button>
               )}
             </div>
@@ -423,99 +330,6 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
           <p>등록자: {creatorNickname}</p>
         </div>
       </main>
-
-      {/* 삭제 요청 모달 */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              장소 삭제 요청
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">
-              삭제 사유를 입력해주세요. 관리자가 검토 후 승인하면 삭제됩니다.
-            </p>
-            <textarea
-              value={deleteReason}
-              onChange={(e) => setDeleteReason(e.target.value)}
-              placeholder="예: 폐업했습니다 / 중복 등록입니다"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 resize-none"
-              rows={4}
-            />
-            <div className="flex gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeleteReason('');
-                }}
-                className="flex-1 px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                disabled={isSubmittingRequest}
-              >
-                취소
-              </button>
-              <button
-                onClick={handleDeleteRequest}
-                disabled={isSubmittingRequest || !deleteReason.trim()}
-                className="flex-1 px-4 py-2 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmittingRequest ? '제출 중...' : '삭제 요청'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 카테고리 수정 요청 모달 */}
-      {showEditModal && place && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">
-              카테고리 수정 요청
-            </h3>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                현재 카테고리
-              </label>
-              <p className="text-sm text-gray-600 px-3 py-2 bg-gray-50 rounded-lg">
-                {place.category}
-              </p>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                새 카테고리
-              </label>
-              <input
-                type="text"
-                value={newCategory}
-                onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="예: 한식, 일식, 중식, 카페 등"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <p className="text-xs text-gray-500 mb-4">
-              관리자가 검토 후 승인하면 카테고리가 변경됩니다.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowEditModal(false);
-                  setNewCategory('');
-                }}
-                className="flex-1 px-4 py-2 text-sm text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                disabled={isSubmittingRequest}
-              >
-                취소
-              </button>
-              <button
-                onClick={handleEditRequest}
-                disabled={isSubmittingRequest || !newCategory.trim()}
-                className="flex-1 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isSubmittingRequest ? '제출 중...' : '수정 요청'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

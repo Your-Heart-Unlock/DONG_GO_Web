@@ -139,21 +139,21 @@ export default function AdminDashboard() {
           </p>
         </Link>
 
-
         <Link
-          href="/admin/requests"
+          href="/admin/places"
           className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">요청 관리</h3>
+            <h3 className="text-lg font-semibold text-gray-900">장소 관리</h3>
           </div>
           <p className="text-sm text-gray-600">
-            삭제/수정 요청 승인 및 거부
+            장소 검색, hide/unhide 처리
           </p>
         </Link>
       </div>
