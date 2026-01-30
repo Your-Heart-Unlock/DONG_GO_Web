@@ -56,21 +56,12 @@ export async function GET(request: NextRequest) {
       .orderBy('createdAt', 'desc')
       .limit(limit + 1); // 다음 페이지 존재 여부 확인용 +1
 
-    // 필터 적용
-    if (filter === 'uncategorized') {
-      // categoryKey가 없거나 'Idle'인 장소
+    // 필터 적용: 미분류 = Idle 또는 Other (제대로 분류되지 않은 장소)
+    if (filter === 'uncategorized' || filter === 'idle') {
       query = adminDb
         .collection('places')
         .where('status', '==', 'active')
-        .where('categoryKey', '==', 'Idle')
-        .orderBy('createdAt', 'desc')
-        .limit(limit + 1);
-    } else if (filter === 'idle') {
-      // categoryKey가 'Idle'인 장소만
-      query = adminDb
-        .collection('places')
-        .where('status', '==', 'active')
-        .where('categoryKey', '==', 'Idle')
+        .where('categoryKey', 'in', ['Idle', 'Other'])
         .orderBy('createdAt', 'desc')
         .limit(limit + 1);
     }
@@ -104,7 +95,7 @@ export async function GET(request: NextRequest) {
     // 전체 개수 조회 (필터별)
     let totalQuery = adminDb.collection('places').where('status', '==', 'active');
     if (filter === 'uncategorized' || filter === 'idle') {
-      totalQuery = totalQuery.where('categoryKey', '==', 'Idle');
+      totalQuery = totalQuery.where('categoryKey', 'in', ['Idle', 'Other']);
     }
     const totalSnapshot = await totalQuery.count().get();
     const total = totalSnapshot.data().count;

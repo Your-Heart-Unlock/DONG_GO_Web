@@ -247,7 +247,7 @@ ${JSON.stringify(data, null, 2)}
             onChange={(e) => setFilter(e.target.value as 'all' | 'idle')}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
           >
-            <option value="idle">미분류만</option>
+            <option value="idle">미분류 (기타 포함)</option>
             <option value="all">전체</option>
           </select>
 
