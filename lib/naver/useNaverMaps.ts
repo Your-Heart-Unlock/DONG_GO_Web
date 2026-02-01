@@ -14,7 +14,8 @@ export function useNaverMaps() {
 
   useEffect(() => {
     // 이미 완전히 로드되었으면 skip
-    if (window.naver && window.naver.maps && window.naver.maps.MarkerClustering) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (window.naver && window.naver.maps && (window.naver.maps as any).MarkerClustering) {
       setIsLoaded(true);
       return;
     }
