@@ -109,27 +109,30 @@ export default function NaverMapView({
 
   // 클러스터 마커 생성
   const createClusterMarker = useCallback((cluster: ClusterGroup, map: naver.maps.Map) => {
+    const clusterIcon = {
+      content: `<div style="
+        cursor: pointer;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        font-size: 14px;
+        color: #333;
+        text-align: center;
+        font-weight: bold;
+        background: #E5E7EB;
+        border-radius: 50%;
+        border: 2px solid #9CA3AF;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      ">${cluster.count}</div>`,
+      size: new naver.maps.Size(40, 40),
+      anchor: new naver.maps.Point(20, 20),
+    };
+
     const marker = new naver.maps.Marker({
       position: new naver.maps.LatLng(cluster.lat, cluster.lng),
       map: map,
-      icon: {
-        content: `<div style="
-          cursor: pointer;
-          width: 40px;
-          height: 40px;
-          line-height: 40px;
-          font-size: 14px;
-          color: #333;
-          text-align: center;
-          font-weight: bold;
-          background: #E5E7EB;
-          border-radius: 50%;
-          border: 2px solid #9CA3AF;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-        ">${cluster.count}</div>`,
-        size: new naver.maps.Size(40, 40),
-        anchor: new naver.maps.Point(20, 20),
-      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      icon: clusterIcon as any,
     });
 
     // 클러스터 클릭 시 줌인
