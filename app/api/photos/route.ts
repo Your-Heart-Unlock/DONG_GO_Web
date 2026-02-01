@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
     const photosWithPlace = await Promise.all(
       photos.map(async (photo) => {
         try {
-          const placeDoc = await adminDb.collection('places').doc(photo.placeId).get();
+          const placeDoc = await adminDb!.collection('places').doc(photo.placeId).get();
           const placeData = placeDoc.data();
           return {
             ...photo,
