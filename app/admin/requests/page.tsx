@@ -6,6 +6,14 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase/client';
 
+interface RequestPayload {
+  reason?: string;
+  newName?: string;
+  newAddress?: string;
+  newCategory?: string;
+  [key: string]: string | undefined;
+}
+
 interface Request {
   requestId: string;
   type: 'place_delete' | 'place_edit';
@@ -13,7 +21,7 @@ interface Request {
   placeName: string;
   requestedBy: string;
   requesterNickname: string;
-  payload: any;
+  payload: RequestPayload;
   status: 'open' | 'approved' | 'rejected';
   createdAt: string;
   resolvedAt?: string;
@@ -217,7 +225,7 @@ export default function RequestsManagementPage() {
               </label>
               <select
                 value={filter}
-                onChange={(e) => setFilter(e.target.value as any)}
+                onChange={(e) => setFilter(e.target.value as 'all' | 'open' | 'approved' | 'rejected')}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">전체</option>
@@ -233,7 +241,7 @@ export default function RequestsManagementPage() {
               </label>
               <select
                 value={typeFilter}
-                onChange={(e) => setTypeFilter(e.target.value as any)}
+                onChange={(e) => setTypeFilter(e.target.value as 'all' | 'place_delete' | 'place_edit')}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">전체</option>
