@@ -31,9 +31,9 @@ export function getCellIdsForBounds(bounds: {
 
   const cellCount = (maxCellLat - minCellLat + 1) * (maxCellLng - minCellLng + 1);
 
-  // 줌 레벨이 너무 낮으면 마커 표시 안 함 (약 500셀 이하)
-  // 클러스터링이 줌 14까지 적용되므로 더 넓은 범위 허용
-  if (cellCount > 500) {
+  // 줌 레벨이 너무 낮으면 마커 표시 안 함 (약 2000셀 이하)
+  // 클러스터링이 줌 14까지 적용되므로 넓은 범위 허용
+  if (cellCount > 2000) {
     return null;
   }
 
