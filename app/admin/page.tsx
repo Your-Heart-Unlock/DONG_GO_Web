@@ -205,12 +205,15 @@ export default function AdminDashboard() {
             </p>
             <p className="text-sm text-gray-600 mt-1">전체 장소</p>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
+          <Link
+            href="/admin/reviews"
+            className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
             <p className="text-2xl font-bold text-gray-900">
               {statsLoading ? '-' : (stats?.totalReviews ?? 0)}
             </p>
             <p className="text-sm text-gray-600 mt-1">전체 리뷰</p>
-          </div>
+          </Link>
           <Link
             href="/admin/users"
             className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
