@@ -5,7 +5,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { createPlace, getPlaceById, findNearbyPlaces } from '@/lib/firebase/places';
-import { MapProvider } from '@/types';
+import { MapProvider, CategoryKey } from '@/types';
+import { CATEGORY_LABELS, ALL_CATEGORY_KEYS } from '@/lib/utils/categoryIcon';
+
+// 사용자가 선택 가능한 카테고리 (Idle 제외)
+const SELECTABLE_CATEGORIES = ALL_CATEGORY_KEYS.filter((key) => key !== 'Idle');
 
 /**
  * 이름 유사도 체크 (간단한 정규화 후 비교)
@@ -54,6 +58,10 @@ function AddPlaceContent() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [error, setError] = useState('');
   const [adding, setAdding] = useState<string | null>(null);
+
+  // 카테고리 선택 모달 상태
+  const [pendingPlace, setPendingPlace] = useState<SearchResult | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
 
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
@@ -129,14 +137,23 @@ function AddPlaceContent() {
     }
   };
 
-  // 장소 추가
-  const handleAddPlace = async (place: SearchResult) => {
+  // 카테고리 선택 모달 열기
+  const handleOpenCategoryModal = (place: SearchResult) => {
     if (!firebaseUser || !isMemberOrOwner) {
       alert('장소를 추가할 권한이 없습니다.');
       return;
     }
+    setPendingPlace(place);
+    setSelectedCategory(null);
+  };
 
+  // 카테고리 선택 후 장소 추가
+  const handleConfirmAdd = async () => {
+    if (!pendingPlace || !selectedCategory || !firebaseUser) return;
+
+    const place = pendingPlace;
     setAdding(place.placeId);
+    setPendingPlace(null);
 
     try {
       // 네이버 placeId 매칭 시도
@@ -191,14 +208,15 @@ function AddPlaceContent() {
         // 취소를 누르면 계속 진행 (새로 추가)
       }
 
-      // 신규 생성
+      // 신규 생성 (선택된 카테고리 사용)
       await createPlace({
         placeId: finalPlaceId,
         name: place.name,
         address: place.address,
         lat: place.lat,
         lng: place.lng,
-        category: place.category,
+        category: CATEGORY_LABELS[selectedCategory], // 한글 카테고리명
+        categoryKey: selectedCategory, // CategoryKey
         source: 'user_added',
         status: 'active',
         mapProvider,
@@ -212,6 +230,7 @@ function AddPlaceContent() {
       alert(err instanceof Error ? err.message : '장소 추가에 실패했습니다.');
     } finally {
       setAdding(null);
+      setSelectedCategory(null);
     }
   };
 
@@ -333,7 +352,7 @@ function AddPlaceContent() {
                       </div>
                     </div>
                     <button
-                      onClick={() => handleAddPlace(place)}
+                      onClick={() => handleOpenCategoryModal(place)}
                       disabled={adding === place.placeId}
                       className="flex-shrink-0 px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
                     >
@@ -368,6 +387,57 @@ function AddPlaceContent() {
           </div>
         )}
       </main>
+
+      {/* 카테고리 선택 모달 */}
+      {pendingPlace && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full max-h-[80vh] overflow-hidden">
+            <div className="p-4 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">카테고리 선택</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                &quot;{pendingPlace.name}&quot;의 카테고리를 선택해주세요.
+              </p>
+            </div>
+
+            <div className="p-4 overflow-y-auto max-h-[50vh]">
+              <div className="grid grid-cols-2 gap-2">
+                {SELECTABLE_CATEGORIES.map((categoryKey) => (
+                  <button
+                    key={categoryKey}
+                    onClick={() => setSelectedCategory(categoryKey)}
+                    className={`p-3 text-left rounded-lg border-2 transition-all ${
+                      selectedCategory === categoryKey
+                        ? 'border-blue-500 bg-blue-50 text-blue-700'
+                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="font-medium">{CATEGORY_LABELS[categoryKey]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="p-4 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={() => {
+                  setPendingPlace(null);
+                  setSelectedCategory(null);
+                }}
+                className="flex-1 py-3 text-gray-700 font-medium bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConfirmAdd}
+                disabled={!selectedCategory}
+                className="flex-1 py-3 text-white font-medium bg-green-600 rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                추가하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
