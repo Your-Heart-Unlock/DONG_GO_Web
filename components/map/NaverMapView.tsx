@@ -3,7 +3,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useNaverMaps } from '@/lib/naver/useNaverMaps';
 import { Place } from '@/types';
-import { getCellIdsForBounds } from '@/lib/utils/cellId';
 import { getCategoryIconPath, tierToIconGrade } from '@/lib/utils/categoryIcon';
 
 export interface MapBounds {
@@ -17,7 +16,29 @@ interface NaverMapViewProps {
   onBoundsChange?: (bounds: MapBounds, zoom: number) => void;
   center?: { lat: number; lng: number };
   zoom?: number;
-  isFilterActive?: boolean; // 필터 활성화 여부
+  isFilterActive?: boolean;
+}
+
+interface ClusterGroup {
+  lat: number;
+  lng: number;
+  count: number;
+  places: Place[];
+}
+
+const CLUSTER_MAX_ZOOM = 14;
+
+/** 줌 레벨에 따른 그리드 크기 반환 (줌아웃할수록 더 넓은 영역 클러스터링) */
+function getGridSizeForZoom(zoom: number): number {
+  // 줌 레벨이 낮을수록 (줌아웃) 그리드 크기 증가
+  if (zoom <= 7) return 0.5;    // 약 50km
+  if (zoom <= 8) return 0.3;    // 약 30km
+  if (zoom <= 9) return 0.15;   // 약 15km
+  if (zoom <= 10) return 0.08;  // 약 8km
+  if (zoom <= 11) return 0.05;  // 약 5km
+  if (zoom <= 12) return 0.03;  // 약 3km
+  if (zoom <= 13) return 0.02;  // 약 2km
+  return 0.015;                  // 약 1.5km (줌 14)
 }
 
 /** 지도 인스턴스에서 현재 bounds 추출 */
@@ -29,59 +50,131 @@ function getMapBounds(map: naver.maps.Map): MapBounds {
   };
 }
 
+/** 장소들을 그리드 기반으로 클러스터링 (줌 레벨에 따라 동적 그리드) */
+function clusterPlaces(places: Place[], zoom: number): ClusterGroup[] {
+  const gridSize = getGridSizeForZoom(zoom);
+  const grid = new Map<string, Place[]>();
+
+  // O(n) 연산: places 배열을 한 번만 순회
+  places.forEach((place) => {
+    const gridX = Math.floor(place.lat / gridSize);
+    const gridY = Math.floor(place.lng / gridSize);
+    const key = `${gridX}_${gridY}`;
+
+    if (!grid.has(key)) {
+      grid.set(key, []);
+    }
+    grid.get(key)!.push(place);
+  });
+
+  const clusters: ClusterGroup[] = [];
+  grid.forEach((groupPlaces) => {
+    const avgLat = groupPlaces.reduce((sum, p) => sum + p.lat, 0) / groupPlaces.length;
+    const avgLng = groupPlaces.reduce((sum, p) => sum + p.lng, 0) / groupPlaces.length;
+
+    clusters.push({
+      lat: avgLat,
+      lng: avgLng,
+      count: groupPlaces.length,
+      places: groupPlaces,
+    });
+  });
+
+  return clusters;
+}
+
 export default function NaverMapView({
   places,
   onMarkerClick,
   onBoundsChange,
-  center = { lat: 37.5665, lng: 126.978 }, // 서울 시청 기본값
+  center = { lat: 37.5665, lng: 126.978 },
   zoom = 12,
   isFilterActive = false,
 }: NaverMapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<naver.maps.Map | null>(null);
-  // placeId → marker 매핑 (캐싱 유지)
   const markerMapRef = useRef<Map<string, naver.maps.Marker>>(new Map());
-  // 콜백 ref (이벤트 리스너에서 최신 참조 사용)
+  const clusterMarkersRef = useRef<naver.maps.Marker[]>([]);
   const onBoundsChangeRef = useRef(onBoundsChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const isFilterActiveRef = useRef(isFilterActive);
+  const placesRef = useRef<Place[]>(places);
 
   onBoundsChangeRef.current = onBoundsChange;
   onMarkerClickRef.current = onMarkerClick;
   isFilterActiveRef.current = isFilterActive;
+  placesRef.current = places;
 
   const { isLoaded, error } = useNaverMaps();
 
-  // 마커 가시성 업데이트: 줌 레벨이 너무 낮을 때만 숨김
-  const updateMarkerVisibility = useCallback(() => {
+  // 클러스터 마커 생성
+  const createClusterMarker = useCallback((cluster: ClusterGroup, map: naver.maps.Map) => {
+    const clusterIcon = {
+      content: `<div style="
+        cursor: pointer;
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
+        font-size: 14px;
+        color: #333;
+        text-align: center;
+        font-weight: bold;
+        background: #E5E7EB;
+        border-radius: 50%;
+        border: 2px solid #9CA3AF;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      ">${cluster.count}</div>`,
+      size: new naver.maps.Size(40, 40),
+      anchor: new naver.maps.Point(20, 20),
+    };
+
+    const marker = new naver.maps.Marker({
+      position: new naver.maps.LatLng(cluster.lat, cluster.lng),
+      map: map,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      icon: clusterIcon as any,
+    });
+
+    // 클러스터 클릭 시 줌인
+    naver.maps.Event.addListener(marker, 'click', () => {
+      map.setCenter(new naver.maps.LatLng(cluster.lat, cluster.lng));
+      map.setZoom(map.getZoom() + 2);
+    });
+
+    return marker;
+  }, []);
+
+  // 클러스터 및 마커 업데이트
+  const updateMarkersAndClusters = useCallback(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // 필터 모드에서는 모든 마커를 항상 표시
-    if (isFilterActiveRef.current) {
-      markerMapRef.current.forEach((marker) => {
-        marker.setVisible(true);
+    const currentZoom = map.getZoom();
+    const showClusters = currentZoom <= CLUSTER_MAX_ZOOM && !isFilterActiveRef.current;
+
+    console.log('[NaverMapView] 마커/클러스터 업데이트:', { zoom: currentZoom, showClusters });
+
+    // 기존 클러스터 마커 제거
+    clusterMarkersRef.current.forEach((marker) => marker.setMap(null));
+    clusterMarkersRef.current = [];
+
+    if (showClusters) {
+      // 클러스터 모드: 개별 마커 숨기고 클러스터 표시
+      markerMapRef.current.forEach((marker) => marker.setVisible(false));
+
+      const clusters = clusterPlaces(placesRef.current, currentZoom);
+      clusters.forEach((cluster) => {
+        const clusterMarker = createClusterMarker(cluster, map);
+        clusterMarkersRef.current.push(clusterMarker);
       });
-      console.log('[NaverMapView] 필터 모드: 모든 마커 표시');
-      return;
+
+      console.log('[NaverMapView] 클러스터 생성:', clusters.length, '개 (줌:', currentZoom, ', 그리드:', getGridSizeForZoom(currentZoom), ')');
+    } else {
+      // 개별 마커 모드: 클러스터 숨기고 개별 마커 표시
+      markerMapRef.current.forEach((marker) => marker.setVisible(true));
+      console.log('[NaverMapView] 개별 마커 표시:', markerMapRef.current.size, '개');
     }
-
-    // 일반 모드: 줌 레벨이 너무 낮을 때만 마커 숨김
-    const mapBounds = getMapBounds(map);
-    const cellIds = getCellIdsForBounds(mapBounds);
-    const tooZoomedOut = cellIds === null;
-
-    markerMapRef.current.forEach((marker) => {
-      // 줌 아웃 과다 시에만 숨김
-      marker.setVisible(!tooZoomedOut);
-    });
-
-    console.log('[NaverMapView] 마커 가시성 업데이트:', {
-      markerCount: markerMapRef.current.size,
-      tooZoomedOut,
-      visible: !tooZoomedOut
-    });
-  }, []);
+  }, [createClusterMarker]);
 
   // 지도 초기화
   useEffect(() => {
@@ -103,33 +196,25 @@ export default function NaverMapView({
     const map = new naver.maps.Map(mapRef.current, mapOptions);
     mapInstanceRef.current = map;
 
+    console.log('[NaverMapView] 지도 생성 완료');
+
     // idle 이벤트: zoom/pan 완료 후 발생
     naver.maps.Event.addListener(map, 'idle', () => {
       const bounds = getMapBounds(map);
       const currentZoom = map.getZoom();
       onBoundsChangeRef.current?.(bounds, currentZoom);
-      updateMarkerVisibility();
+      updateMarkersAndClusters();
     });
 
-    // 지도 초기화 직후 bounds 로딩 강제 트리거 (페이지 복귀 시 마커 복원)
-    console.log('[NaverMapView] 지도 생성 완료, 초기 데이터 로딩 시작', {
-      center: { lat: center.lat, lng: center.lng },
-      zoom,
-      placesCount: places.length
-    });
+    // 초기 bounds 로딩
     setTimeout(() => {
       const bounds = getMapBounds(map);
       const currentZoom = map.getZoom();
-      console.log('[NaverMapView] 초기 bounds 로딩 트리거:', {
-        bounds,
-        zoom: currentZoom,
-        onBoundsChangeExists: !!onBoundsChangeRef.current
-      });
       onBoundsChangeRef.current?.(bounds, currentZoom);
     }, 100);
-  }, [isLoaded, center.lat, center.lng, zoom, updateMarkerVisibility]);
+  }, [isLoaded, center.lat, center.lng, zoom, updateMarkersAndClusters]);
 
-  // 지도 중심/줌 업데이트 (sessionStorage 복원 등 props 변경 시)
+  // 지도 중심/줌 업데이트
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -148,19 +233,18 @@ export default function NaverMapView({
     }
   }, [center.lat, center.lng, zoom]);
 
-  // 마커 렌더링 (증분 추가 + 불필요한 마커 제거)
+  // 마커 렌더링
   useEffect(() => {
     if (!mapInstanceRef.current || !isLoaded) return;
 
     const map = mapInstanceRef.current;
-    const currentPlaceIds = new Set(places.map(p => p.placeId));
+    const currentPlaceIds = new Set(places.map((p) => p.placeId));
+    const currentZoom = map.getZoom();
+    const showClusters = currentZoom <= CLUSTER_MAX_ZOOM && !isFilterActive;
 
-    console.log('[NaverMapView] 마커 렌더링 시작:', {
-      placesCount: places.length,
-      existingMarkersCount: markerMapRef.current.size
-    });
+    console.log('[NaverMapView] 마커 렌더링 시작:', { placesCount: places.length });
 
-    // 1. places에 없는 마커 제거 (필터링 또는 장소 삭제 시)
+    // 1. 삭제된 장소의 마커 제거
     const markersToRemove: string[] = [];
     markerMapRef.current.forEach((marker, placeId) => {
       if (!currentPlaceIds.has(placeId)) {
@@ -168,15 +252,11 @@ export default function NaverMapView({
         markersToRemove.push(placeId);
       }
     });
-    markersToRemove.forEach(id => markerMapRef.current.delete(id));
-    if (markersToRemove.length > 0) {
-      console.log('[NaverMapView] 마커 제거됨:', markersToRemove.length);
-    }
+    markersToRemove.forEach((id) => markerMapRef.current.delete(id));
 
     // 2. 새로운 장소의 마커 추가
     let addedCount = 0;
     places.forEach((place) => {
-      // 이미 생성된 마커는 스킵
       if (markerMapRef.current.has(place.placeId)) return;
 
       const iconGrade = tierToIconGrade(place.avgTier);
@@ -184,9 +264,10 @@ export default function NaverMapView({
 
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(place.lat, place.lng),
-        map,
+        map: map,
         title: place.name,
         clickable: true,
+        visible: !showClusters,
         icon: {
           url: iconPath,
           size: new naver.maps.Size(29, 38),
@@ -207,14 +288,17 @@ export default function NaverMapView({
       console.log('[NaverMapView] 마커 추가됨:', addedCount);
     }
 
-    // 3. 마커 가시성 갱신
-    updateMarkerVisibility();
-    console.log('[NaverMapView] 마커 렌더링 완료, 총 마커 수:', markerMapRef.current.size);
-  }, [places, isLoaded, updateMarkerVisibility]);
+    // 3. 클러스터/마커 업데이트
+    updateMarkersAndClusters();
+
+    console.log('[NaverMapView] 마커 렌더링 완료, 총:', markerMapRef.current.size);
+  }, [places, isLoaded, isFilterActive, updateMarkersAndClusters]);
 
   // Cleanup
   useEffect(() => {
     return () => {
+      clusterMarkersRef.current.forEach((marker) => marker.setMap(null));
+      clusterMarkersRef.current = [];
       markerMapRef.current.forEach((marker) => marker.setMap(null));
       markerMapRef.current.clear();
       if (mapInstanceRef.current) {
@@ -230,9 +314,6 @@ export default function NaverMapView({
         <div className="text-center p-4">
           <p className="text-red-600 font-semibold mb-2">지도 로드 실패</p>
           <p className="text-sm text-gray-600">{error.message}</p>
-          <p className="text-xs text-gray-500 mt-2">
-            Naver Maps Client ID를 확인해주세요.
-          </p>
         </div>
       </div>
     );

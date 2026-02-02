@@ -16,6 +16,7 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 사진 목록 로드
@@ -126,7 +127,15 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
 
     try {
       // 이미지 압축 (Vercel 4.5MB 페이로드 제한 대응)
-      const compressed = await compressImage(file);
+      let compressed: File;
+      try {
+        compressed = await compressImage(file);
+      } catch (compressError) {
+        console.error('Image compression error:', compressError);
+        alert('이미지 처리 중 오류가 발생했습니다.\n지원되지 않는 이미지 형식이거나 손상된 파일일 수 있습니다.');
+        setUploading(false);
+        return;
+      }
 
       if (compressed.size > 4 * 1024 * 1024) {
         alert('이미지 압축 후에도 파일이 너무 큽니다. 더 작은 이미지를 사용해주세요.');
@@ -157,27 +166,47 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
               const response = JSON.parse(xhr.responseText);
               resolve(response);
             } catch {
-              reject(new Error('Failed to parse response'));
+              reject(new Error('서버 응답을 처리할 수 없습니다.'));
             }
           } else {
             try {
               const errorData = JSON.parse(xhr.responseText);
-              reject(new Error(errorData.error || 'Upload failed'));
+              let errorMessage = '업로드에 실패했습니다.';
+
+              if (xhr.status === 401) {
+                errorMessage = '로그인이 만료되었습니다. 다시 로그인해주세요.';
+              } else if (xhr.status === 403) {
+                errorMessage = '권한이 없습니다.';
+              } else if (xhr.status === 413) {
+                errorMessage = '파일 크기가 너무 큽니다.';
+              } else if (xhr.status === 500) {
+                errorMessage = '서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.';
+              } else if (errorData.error) {
+                errorMessage = errorData.error;
+              }
+
+              reject(new Error(errorMessage));
             } catch {
-              reject(new Error(`Upload failed with status ${xhr.status}`));
+              reject(new Error(`업로드 실패 (오류 코드: ${xhr.status})`));
             }
           }
         });
 
         xhr.addEventListener('error', () => {
-          reject(new Error('Network error'));
+          reject(new Error('네트워크 오류가 발생했습니다. 인터넷 연결을 확인해주세요.'));
         });
 
         xhr.addEventListener('abort', () => {
-          reject(new Error('Upload cancelled'));
+          reject(new Error('업로드가 취소되었습니다.'));
+        });
+
+        xhr.addEventListener('timeout', () => {
+          reject(new Error('업로드 시간이 초과되었습니다. 네트워크 상태를 확인해주세요.'));
         });
       });
 
+      // 타임아웃 설정 (60초)
+      xhr.timeout = 60000;
       xhr.open('POST', `/api/places/${placeId}/photos`);
       xhr.setRequestHeader('Authorization', `Bearer ${token}`);
       xhr.send(formData);
@@ -191,7 +220,8 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
       }
     } catch (error) {
       console.error('Photo upload error:', error);
-      alert('사진 업로드에 실패했습니다.');
+      const message = error instanceof Error ? error.message : '사진 업로드에 실패했습니다.';
+      alert(message);
     } finally {
       setUploading(false);
       setUploadProgress(0);
@@ -228,10 +258,51 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
     }
   }
 
-  // 사진 클릭 시 확대
-  function handlePhotoClick(url: string) {
-    window.open(url, '_blank');
+  // 사진 클릭 시 모달 열기
+  function handlePhotoClick(index: number) {
+    setSelectedPhotoIndex(index);
   }
+
+  // 모달 닫기
+  function closeModal() {
+    setSelectedPhotoIndex(null);
+  }
+
+  // 이전 사진
+  function showPreviousPhoto() {
+    if (selectedPhotoIndex === null) return;
+    setSelectedPhotoIndex(selectedPhotoIndex > 0 ? selectedPhotoIndex - 1 : photos.length - 1);
+  }
+
+  // 다음 사진
+  function showNextPhoto() {
+    if (selectedPhotoIndex === null) return;
+    setSelectedPhotoIndex(selectedPhotoIndex < photos.length - 1 ? selectedPhotoIndex + 1 : 0);
+  }
+
+  // 키보드 이벤트 핸들러
+  useEffect(() => {
+    if (selectedPhotoIndex === null) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        setSelectedPhotoIndex(null);
+      } else if (e.key === 'ArrowLeft') {
+        setSelectedPhotoIndex((prev) => {
+          if (prev === null) return null;
+          return prev > 0 ? prev - 1 : photos.length - 1;
+        });
+      } else if (e.key === 'ArrowRight') {
+        setSelectedPhotoIndex((prev) => {
+          if (prev === null) return null;
+          return prev < photos.length - 1 ? prev + 1 : 0;
+        });
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPhotoIndex, photos.length]);
 
   // 드래그 앤 드롭 핸들러
   function handleDragEnter(e: React.DragEvent) {
@@ -385,7 +456,7 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
             </div>
           )}
 
-          {photos.map((photo) => (
+          {photos.map((photo, index) => (
             <div
               key={photo.photoId}
               className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden group"
@@ -394,7 +465,7 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
                 src={photo.url}
                 alt="장소 사진"
                 className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                onClick={() => handlePhotoClick(photo.url)}
+                onClick={() => handlePhotoClick(index)}
               />
               {/* 삭제 버튼: 본인이 업로드한 사진이거나 owner만 */}
               {(photo.uploadedBy === user?.uid || user?.role === 'owner') && (
@@ -415,6 +486,77 @@ export default function PhotoGallery({ placeId }: PhotoGalleryProps) {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* 사진 모달 캐러셀 */}
+      {selectedPhotoIndex !== null && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+          onClick={closeModal}
+        >
+          <div className="relative w-full h-full flex items-center justify-center p-4">
+            {/* 닫기 버튼 */}
+            <button
+              onClick={closeModal}
+              className="absolute top-4 right-4 p-2 text-white bg-black bg-opacity-50 rounded-full hover:bg-opacity-70 transition-all z-10"
+              aria-label="닫기"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            {/* 이전 버튼 */}
+            {photos.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showPreviousPhoto();
+                }}
+                className="absolute left-4 p-3 text-white bg-black bg-opacity-50 rounded-full hover:bg-opacity-70 transition-all"
+                aria-label="이전 사진"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            )}
+
+            {/* 사진 */}
+            <div
+              className="max-w-5xl max-h-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <img
+                src={photos[selectedPhotoIndex].url}
+                alt="장소 사진"
+                className="max-w-full max-h-[90vh] object-contain rounded-lg"
+              />
+              {/* 사진 카운터 */}
+              <div className="text-center mt-4">
+                <span className="text-white text-sm bg-black bg-opacity-50 px-3 py-1 rounded-full">
+                  {selectedPhotoIndex + 1} / {photos.length}
+                </span>
+              </div>
+            </div>
+
+            {/* 다음 버튼 */}
+            {photos.length > 1 && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  showNextPhoto();
+                }}
+                className="absolute right-4 p-3 text-white bg-black bg-opacity-50 rounded-full hover:bg-opacity-70 transition-all"
+                aria-label="다음 사진"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

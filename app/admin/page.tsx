@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { auth } from '@/lib/firebase/client';
+
+interface AdminStats {
+  totalPlaces: number;
+  totalReviews: number;
+  pendingUsers: number;
+  openRequests: number;
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth();
@@ -13,6 +20,8 @@ export default function AdminDashboard() {
   const [migratingGeohash, setMigratingGeohash] = useState(false);
   const [registrantsResult, setRegistrantsResult] = useState<string | null>(null);
   const [migratingRegistrants, setMigratingRegistrants] = useState(false);
+  const [stats, setStats] = useState<AdminStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const handleMigrateCellId = async () => {
     if (!auth?.currentUser) {
@@ -94,6 +103,34 @@ export default function AdminDashboard() {
     }
   };
 
+  // 통계 가져오기
+  useEffect(() => {
+    async function fetchStats() {
+      if (!auth?.currentUser || !user || user.role !== 'owner') return;
+
+      setStatsLoading(true);
+      try {
+        const token = await auth.currentUser.getIdToken();
+        const response = await fetch('/api/admin/stats', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
+        } else {
+          console.error('Failed to fetch stats');
+        }
+      } catch (error) {
+        console.error('Fetch stats error:', error);
+      } finally {
+        setStatsLoading(false);
+      }
+    }
+
+    fetchStats();
+  }, [user]);
+
   return (
     <div className="space-y-8">
       <div>
@@ -139,49 +176,60 @@ export default function AdminDashboard() {
           </p>
         </Link>
 
+
         <Link
-          href="/admin/places"
+          href="/admin/requests"
           className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
         >
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
-              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+            <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900">장소 관리</h3>
+            <h3 className="text-lg font-semibold text-gray-900">요청 관리</h3>
           </div>
           <p className="text-sm text-gray-600">
-            장소 검색, hide/unhide 처리
+            삭제/수정 요청 승인 및 거부
           </p>
         </Link>
       </div>
 
-      {/* Stats (Coming Soon) */}
+      {/* Stats */}
       <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">현황 요약</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.totalPlaces ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">전체 장소</p>
           </div>
           <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.totalReviews ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">전체 리뷰</p>
           </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+          <Link
+            href="/admin/users"
+            className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.pendingUsers ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">Pending 사용자</p>
-          </div>
-          <div className="text-center p-4 bg-gray-50 rounded-lg">
-            <p className="text-2xl font-bold text-gray-900">-</p>
+          </Link>
+          <Link
+            href="/admin/requests"
+            className="text-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            <p className="text-2xl font-bold text-gray-900">
+              {statsLoading ? '-' : (stats?.openRequests ?? 0)}
+            </p>
             <p className="text-sm text-gray-600 mt-1">열린 요청</p>
-          </div>
+          </Link>
         </div>
-        <p className="text-xs text-gray-500 mt-4 text-center">
-          통계 기능은 추후 구현 예정
-        </p>
       </div>
 
       {/* 데이터 마이그레이션 */}

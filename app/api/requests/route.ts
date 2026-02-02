@@ -148,7 +148,7 @@ export async function GET(request: NextRequest) {
 
     // 요청 목록 조회
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query: any = adminDb.collection('requests').orderBy('createdAt', 'desc');
+    let query: any = adminDb.collection('requests');
 
     if (status) {
       query = query.where('status', '==', status);
@@ -159,6 +159,8 @@ export async function GET(request: NextRequest) {
     }
 
     const snapshot = await query.get();
+
+    // 클라이언트 사이드 정렬 (복합 인덱스 없이 사용하기 위해)
 
     // 요청 목록에 장소 이름과 요청자 닉네임 추가
     const requests = await Promise.all(
@@ -199,6 +201,9 @@ export async function GET(request: NextRequest) {
         };
       })
     );
+
+    // 생성일 기준 내림차순 정렬 (최신순)
+    requests.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 
     return NextResponse.json({ requests });
   } catch (error) {
