@@ -13,11 +13,13 @@ import { getCellIdsForBounds } from '@/lib/utils/cellId';
 import { Place, FilterState } from '@/types';
 
 const MAP_STATE_STORAGE_KEY = 'donggo_map_state';
+const CLUSTER_MAX_ZOOM = 14; // 이 줌 이하에서는 클러스터링 표시
 
 export default function HomePage() {
   const router = useRouter();
   const { firebaseUser, user, loading } = useAuth();
   const [places, setPlaces] = useState<Place[]>([]);
+  const [allPlaces, setAllPlaces] = useState<Place[]>([]); // 클러스터링용 전체 장소
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
@@ -25,6 +27,7 @@ export default function HomePage() {
     activeCount: 0,
   });
   const [currentBounds, setCurrentBounds] = useState<MapBounds | null>(null);
+  const [currentZoom, setCurrentZoom] = useState<number>(12);
 
   // 지도 상태 (줌, 중심 좌표)
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.5665, lng: 126.978 });
@@ -42,6 +45,8 @@ export default function HomePage() {
   const loadedCellIdsRef = useRef<Set<string>>(new Set());
   // 초기 로딩이 완료되었는지 추적
   const hasInitialLoadedRef = useRef(false);
+  // 전체 장소 로드 완료 여부
+  const allPlacesLoadedRef = useRef(false);
   // 지도 컴포넌트 재마운트를 위한 key
   const [mapKey, setMapKey] = useState(0);
 
@@ -65,6 +70,27 @@ export default function HomePage() {
       } catch (error) {
         console.error('지도 상태 복원 실패:', error);
       }
+    }
+  }, []);
+
+  // 클러스터링용 전체 장소 로드
+  const loadAllPlaces = useCallback(async () => {
+    if (allPlacesLoadedRef.current) {
+      console.log('[HomePage] 전체 장소 이미 로드됨, 스킵');
+      return;
+    }
+
+    console.log('[HomePage] 클러스터링용 전체 장소 로딩 시작');
+    try {
+      const response = await fetch('/api/places/all');
+      if (response.ok) {
+        const data = await response.json();
+        setAllPlaces(data.places);
+        allPlacesLoadedRef.current = true;
+        console.log(`[HomePage] 전체 장소 로드 완료: ${data.places.length}개`);
+      }
+    } catch (error) {
+      console.error('[HomePage] 전체 장소 로딩 실패:', error);
     }
   }, []);
 
@@ -116,8 +142,9 @@ export default function HomePage() {
   const handleBoundsChange = useCallback(async (bounds: MapBounds, zoom: number) => {
     console.log(`[HomePage] handleBoundsChange 호출됨, zoom: ${zoom}, 필터 활성: ${filterState.isActive}, 초기로드완료: ${hasInitialLoadedRef.current}`);
 
-    // 현재 bounds 저장
+    // 현재 bounds와 zoom 저장
     setCurrentBounds(bounds);
+    setCurrentZoom(zoom);
 
     // 지도 중심 좌표 계산
     const center = {
@@ -143,6 +170,11 @@ export default function HomePage() {
       return;
     }
 
+    // 클러스터링 모드 (줌 14 이하)에서는 전체 장소 로드
+    if (zoom <= CLUSTER_MAX_ZOOM) {
+      await loadAllPlaces();
+    }
+
     // 초기 로딩이 아직 안 된 경우 강제로 데이터 로드
     if (!hasInitialLoadedRef.current) {
       console.log('[HomePage] 초기 로딩 강제 실행');
@@ -153,7 +185,7 @@ export default function HomePage() {
     }
 
     await loadPlacesByBounds(bounds);
-  }, [filterState.isActive, loadPlacesByBounds]);
+  }, [filterState.isActive, loadPlacesByBounds, loadAllPlaces]);
 
   const handleLogout = async () => {
     try {
@@ -391,6 +423,7 @@ export default function HomePage() {
         <NaverMapView
           key={mapKey}
           places={places}
+          allPlaces={allPlaces}
           onMarkerClick={setSelectedPlace}
           onBoundsChange={handleBoundsChange}
           center={mapCenter}

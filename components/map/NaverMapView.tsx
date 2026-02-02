@@ -12,6 +12,7 @@ export interface MapBounds {
 
 interface NaverMapViewProps {
   places: Place[];
+  allPlaces?: Place[]; // 클러스터링용 전체 장소
   onMarkerClick?: (place: Place) => void;
   onBoundsChange?: (bounds: MapBounds, zoom: number) => void;
   center?: { lat: number; lng: number };
@@ -85,6 +86,7 @@ function clusterPlaces(places: Place[], zoom: number): ClusterGroup[] {
 
 export default function NaverMapView({
   places,
+  allPlaces = [],
   onMarkerClick,
   onBoundsChange,
   center = { lat: 37.5665, lng: 126.978 },
@@ -99,11 +101,13 @@ export default function NaverMapView({
   const onMarkerClickRef = useRef(onMarkerClick);
   const isFilterActiveRef = useRef(isFilterActive);
   const placesRef = useRef<Place[]>(places);
+  const allPlacesRef = useRef<Place[]>(allPlaces);
 
   onBoundsChangeRef.current = onBoundsChange;
   onMarkerClickRef.current = onMarkerClick;
   isFilterActiveRef.current = isFilterActive;
   placesRef.current = places;
+  allPlacesRef.current = allPlaces;
 
   const { isLoaded, error } = useNaverMaps();
 
@@ -162,13 +166,15 @@ export default function NaverMapView({
       // 클러스터 모드: 개별 마커 숨기고 클러스터 표시
       markerMapRef.current.forEach((marker) => marker.setVisible(false));
 
-      const clusters = clusterPlaces(placesRef.current, currentZoom);
+      // 클러스터링에는 전체 장소 데이터 사용 (allPlaces가 있으면 사용, 없으면 places 사용)
+      const placesForClustering = allPlacesRef.current.length > 0 ? allPlacesRef.current : placesRef.current;
+      const clusters = clusterPlaces(placesForClustering, currentZoom);
       clusters.forEach((cluster) => {
         const clusterMarker = createClusterMarker(cluster, map);
         clusterMarkersRef.current.push(clusterMarker);
       });
 
-      console.log('[NaverMapView] 클러스터 생성:', clusters.length, '개 (줌:', currentZoom, ', 그리드:', getGridSizeForZoom(currentZoom), ')');
+      console.log('[NaverMapView] 클러스터 생성:', clusters.length, '개 (줌:', currentZoom, ', 전체장소:', placesForClustering.length, '개, 그리드:', getGridSizeForZoom(currentZoom), ')');
     } else {
       // 개별 마커 모드: 클러스터 숨기고 개별 마커 표시
       markerMapRef.current.forEach((marker) => marker.setVisible(true));
@@ -293,6 +299,14 @@ export default function NaverMapView({
 
     console.log('[NaverMapView] 마커 렌더링 완료, 총:', markerMapRef.current.size);
   }, [places, isLoaded, isFilterActive, updateMarkersAndClusters]);
+
+  // allPlaces 변경 시 클러스터 업데이트
+  useEffect(() => {
+    if (allPlaces.length > 0 && mapInstanceRef.current) {
+      console.log('[NaverMapView] 전체 장소 데이터 수신, 클러스터 업데이트:', allPlaces.length, '개');
+      updateMarkersAndClusters();
+    }
+  }, [allPlaces, updateMarkersAndClusters]);
 
   // Cleanup
   useEffect(() => {
