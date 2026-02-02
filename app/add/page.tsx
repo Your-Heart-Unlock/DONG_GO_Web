@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { createPlace, getPlaceById, findNearbyPlaces } from '@/lib/firebase/places';
-import { MapProvider, CategoryKey } from '@/types';
+import { createPlace, getPlaceById, findNearbyPlaces, updatePlace } from '@/lib/firebase/places';
+import { CategoryKey } from '@/types';
 import { CATEGORY_LABELS, ALL_CATEGORY_KEYS } from '@/lib/utils/categoryIcon';
 
 // 사용자가 선택 가능한 카테고리 (Idle 제외)
@@ -156,34 +156,41 @@ function AddPlaceContent() {
     setPendingPlace(null);
 
     try {
-      // 네이버 placeId 매칭 시도
-      let finalPlaceId = place.placeId; // 카카오 ID를 기본값으로
-      let mapProvider: MapProvider = 'kakao';
-      try {
-        const resolveRes = await fetch(
-          `/api/search/naver-resolve?name=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}`
-        );
-        const resolveData = await resolveRes.json();
-        if (resolveData.naverPlaceId) {
-          finalPlaceId = resolveData.naverPlaceId;
-          mapProvider = 'naver';
-        }
-      } catch {
-        // 네이버 매칭 실패 시 카카오 ID 유지
-      }
+      // 카카오 ID를 placeId로 사용 (네이버/카카오 모두 이름+주소 검색으로 연결)
+      const finalPlaceId = place.placeId;
 
-      // 1. ID 기반 중복 체크 (네이버 ID, 카카오 ID 모두)
+      // 1. ID 기반 중복 체크
       const existing = await getPlaceById(finalPlaceId);
-      const existingKakao = finalPlaceId !== place.placeId ? await getPlaceById(place.placeId) : null;
+      if (existing) {
+        // 삭제된 장소라면 재활성화 옵션 제공
+        if (existing.status === 'deleted') {
+          const reactivate = confirm(
+            `"${place.name}"은(는) 이전에 삭제된 장소입니다.\n다시 활성화하시겠습니까?`
+          );
+          if (reactivate) {
+            // 삭제된 장소를 새 데이터로 재활성화
+            await updatePlace(finalPlaceId, {
+              name: place.name,
+              address: place.address,
+              lat: place.lat,
+              lng: place.lng,
+              category: CATEGORY_LABELS[selectedCategory],
+              categoryKey: selectedCategory,
+              status: 'active',
+              mapProvider: 'kakao',
+            });
+            alert(`"${place.name}"이(가) 다시 활성화되었습니다.`);
+            router.push(`/places/${finalPlaceId}`);
+          }
+          return;
+        }
 
-      const foundById = existing || existingKakao;
-      if (foundById) {
-        const foundId = existing ? finalPlaceId : place.placeId;
+        // 활성 상태인 경우 기존 동작
         const goToDetail = confirm(
           `"${place.name}"은(는) 이미 등록된 장소입니다.\n상세 페이지로 이동할까요?`
         );
         if (goToDetail) {
-          router.push(`/places/${foundId}`);
+          router.push(`/places/${finalPlaceId}`);
         }
         return;
       }
@@ -219,7 +226,7 @@ function AddPlaceContent() {
         categoryKey: selectedCategory, // CategoryKey
         source: 'user_added',
         status: 'active',
-        mapProvider,
+        mapProvider: 'kakao', // 카카오 검색 기반으로 추가됨
         createdBy: firebaseUser.uid,
       });
 
