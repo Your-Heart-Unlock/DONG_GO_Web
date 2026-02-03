@@ -118,14 +118,15 @@ export default function NaverMapView({
         cursor: pointer;
         width: 40px;
         height: 40px;
-        line-height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-size: 14px;
-        color: #333;
-        text-align: center;
+        color: #fff;
         font-weight: bold;
-        background: #E5E7EB;
+        background: #007AE8;
         border-radius: 50%;
-        border: 2px solid #9CA3AF;
+        border: 2px solid #0060B8;
         box-shadow: 0 2px 4px rgba(0,0,0,0.2);
       ">${cluster.count}</div>`,
       size: new naver.maps.Size(40, 40),
