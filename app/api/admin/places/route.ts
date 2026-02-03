@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
       query = adminDb
         .collection('places')
         .where('status', '==', 'active')
-        .where('categoryKey', 'in', ['DINING', 'CAFE', 'BAR'])
+        .where('categoryCode', 'in', ['DINING', 'CAFE', 'BAR'])
         .orderBy('createdAt', 'desc')
         .limit(limit + 1);
     }
