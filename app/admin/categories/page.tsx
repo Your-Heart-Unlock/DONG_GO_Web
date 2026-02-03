@@ -33,6 +33,7 @@ export default function AdminCategoriesPage() {
   const [llmInput, setLlmInput] = useState('');
   const [updating, setUpdating] = useState(false);
   const [updateResult, setUpdateResult] = useState<string | null>(null);
+  const [migrating, setMigrating] = useState(false);
 
   // 장소 목록 불러오기
   const fetchPlaces = async (append = false) => {
@@ -196,6 +197,42 @@ ${JSON.stringify(data, null, 2)}
     }
   };
 
+  // categoryCode 정리 / CAFE·BAR 자동 분류
+  const runMigration = async (action: 'cleanup' | 'auto-assign') => {
+    if (!auth?.currentUser) return;
+    const label = action === 'cleanup'
+      ? '분류 완료된 장소의 categoryCode를 삭제합니다.'
+      : 'CAFE→카페/디저트, BAR→술/바 로 자동 분류합니다.';
+    if (!confirm(label + ' 진행할까요?')) return;
+
+    setMigrating(true);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/admin/places/categories', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action }),
+      });
+
+      if (!response.ok) throw new Error('요청 실패');
+      const result = await response.json();
+
+      if (action === 'cleanup') {
+        alert(`${result.cleaned}개 장소에서 categoryCode를 삭제했습니다.`);
+      } else {
+        alert(`${result.assigned}개 장소의 카테고리를 자동 분류했습니다.`);
+      }
+    } catch (error) {
+      console.error('Migration error:', error);
+      alert('작업 중 오류가 발생했습니다.');
+    } finally {
+      setMigrating(false);
+    }
+  };
+
   // 개별 카테고리 수정
   const updateSingleCategory = async (placeId: string, categoryKey: CategoryKey) => {
     if (!auth?.currentUser) return;
@@ -269,6 +306,25 @@ ${JSON.stringify(data, null, 2)}
               LLM 프롬프트 복사 ({places.length}개)
             </button>
           )}
+        </div>
+
+        {/* 데이터 정리 도구 */}
+        <div className="flex flex-wrap items-center gap-3 mt-3 pt-3 border-t border-gray-200">
+          <span className="text-xs text-gray-500 font-medium">데이터 정리:</span>
+          <button
+            onClick={() => runMigration('auto-assign')}
+            disabled={migrating}
+            className="px-3 py-1.5 bg-amber-600 text-white text-xs font-medium rounded-lg hover:bg-amber-700 disabled:opacity-50"
+          >
+            {migrating ? '처리 중...' : 'CAFE/BAR 자동 분류'}
+          </button>
+          <button
+            onClick={() => runMigration('cleanup')}
+            disabled={migrating}
+            className="px-3 py-1.5 bg-red-600 text-white text-xs font-medium rounded-lg hover:bg-red-700 disabled:opacity-50"
+          >
+            {migrating ? '처리 중...' : 'categoryCode 정리'}
+          </button>
         </div>
       </div>
 
