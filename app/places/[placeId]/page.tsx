@@ -7,7 +7,8 @@ import { auth, db } from '@/lib/firebase/client';
 import { getPlaceById } from '@/lib/firebase/places';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { getPlaceStats } from '@/lib/firebase/reviews';
-import { Place, PlaceStats, RatingTier, MapProvider } from '@/types';
+import { Place, PlaceStats, RatingTier, MapProvider, CategoryKey } from '@/types';
+import { CATEGORY_LABELS, ALL_CATEGORY_KEYS } from '@/lib/utils/categoryIcon';
 import ReviewList from '@/components/reviews/ReviewList';
 import PhotoGallery from '@/components/photos/PhotoGallery';
 
@@ -177,8 +178,8 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
 
   // 카테고리 수정 요청 제출
   async function handleEditRequest() {
-    if (!newCategory.trim()) {
-      alert('새 카테고리를 입력해주세요.');
+    if (!newCategory || newCategory === (place?.categoryKey || 'Idle')) {
+      alert('다른 카테고리를 선택해주세요.');
       return;
     }
 
@@ -197,7 +198,9 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
           type: 'place_edit',
           placeId,
           payload: {
-            category: newCategory,
+            categoryKey: newCategory,
+            category: CATEGORY_LABELS[newCategory as CategoryKey],
+            oldCategoryKey: place.categoryKey || 'Idle',
             oldCategory: place.category,
           },
         }),
@@ -375,7 +378,10 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
                 </p>
               ) : (
                 <button
-                  onClick={() => setShowEditModal(true)}
+                  onClick={() => {
+                    setNewCategory(place?.categoryKey || 'Idle');
+                    setShowEditModal(true);
+                  }}
                   className="w-full px-4 py-2 text-sm text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors"
                 >
                   카테고리 수정 요청
@@ -507,13 +513,17 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 새 카테고리
               </label>
-              <input
-                type="text"
+              <select
                 value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
-                placeholder="예: 한식, 일식, 중식, 카페 등"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              >
+                {ALL_CATEGORY_KEYS.filter(k => k !== 'Idle').map((key) => (
+                  <option key={key} value={key}>
+                    {CATEGORY_LABELS[key]}
+                  </option>
+                ))}
+              </select>
             </div>
             <p className="text-xs text-gray-500 mb-4">
               관리자가 검토 후 승인하면 카테고리가 변경됩니다.
@@ -531,7 +541,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
               </button>
               <button
                 onClick={handleEditRequest}
-                disabled={isSubmittingRequest || !newCategory.trim()}
+                disabled={isSubmittingRequest || newCategory === (place?.categoryKey || 'Idle')}
                 className="flex-1 px-4 py-2 text-sm text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isSubmittingRequest ? '제출 중...' : '수정 요청'}
