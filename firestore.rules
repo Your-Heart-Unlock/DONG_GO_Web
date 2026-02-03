@@ -165,5 +165,23 @@ service cloud.firestore {
       allow read: if true;        // 라벨 매핑 공개 OK
       allow write: if isOwner();
     }
+
+    // ---------- monthly_user_stats ----------
+    match /monthly_user_stats/{monthId}/users/{uid} {
+      allow read: if isMemberOrOwner();
+      allow write: if isMemberOrOwner() && isSelf(uid);
+    }
+
+    // ---------- monthly_leaderboard (Admin SDK로만 write) ----------
+    match /monthly_leaderboard/{monthId} {
+      allow read: if isMemberOrOwner();
+      allow write: if false;
+    }
+
+    // ---------- monthly_service_stats (Admin SDK로만 write) ----------
+    match /monthly_service_stats/{monthId} {
+      allow read: if isMemberOrOwner();
+      allow write: if false;
+    }
   }
 }

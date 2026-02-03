@@ -217,3 +217,61 @@ export interface FilterState extends SearchQuery {
   isActive: boolean; // 필터가 적용 중인지
   activeCount: number; // 활성화된 필터 개수
 }
+
+// ===== QRS: Aggregate & Leaderboard Types =====
+
+/** Per-user monthly stats (stored at monthly_user_stats/{YYYY-MM}/users/{uid}) */
+export interface MonthlyUserStats {
+  month: string; // "YYYY-MM"
+  uid: string;
+  reviews: number;
+  recordPoints: number;
+  tierCounts: Record<RatingTier, number>;
+  categoryReviews: Partial<Record<CategoryKey, number>>;
+  lastActiveAt: Date;
+}
+
+/** Leaderboard entry for a single user in a ranking */
+export interface LeaderboardEntry {
+  uid: string;
+  nickname: string;
+  value: number;
+}
+
+/** Category winner entry */
+export interface CategoryWinner {
+  uid: string;
+  nickname: string;
+  reviews: number;
+}
+
+/** Monthly leaderboard snapshot (stored at monthly_leaderboard/{YYYY-MM}) */
+export interface MonthlyLeaderboard {
+  month: string;
+  generatedAt: Date;
+  reviewKingTop: LeaderboardEntry[];
+  recordKingTop: LeaderboardEntry[];
+  overallTop: LeaderboardEntry[];
+  categoryWinners: Partial<Record<CategoryKey, CategoryWinner>>;
+  hiddenCount: number;
+}
+
+/** Monthly service stats snapshot (stored at monthly_service_stats/{YYYY-MM}) */
+export interface MonthlyServiceStats {
+  month: string;
+  generatedAt: Date;
+  totals: {
+    totalReviews: number;
+    activeUsers: number;
+    totalPlaces: number;
+  };
+  distributions: {
+    tierCounts: Record<RatingTier, number>;
+    categoryCounts: Partial<Record<CategoryKey, number>>;
+  };
+  topReviewedPlaces: {
+    placeId: string;
+    placeName: string;
+    reviewCount: number;
+  }[];
+}
