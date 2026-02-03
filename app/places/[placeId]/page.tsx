@@ -258,18 +258,30 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
   // 지도 제공자 판별: mapProvider 필드 우선, 없으면 source로 추정
   function getMapProvider(p: Place): MapProvider {
     if (p.mapProvider) return p.mapProvider;
-    // 기존 데이터 하위 호환: naver_import는 네이버, user_added는 네이버 기본값
-    return p.source === 'naver_import' ? 'naver' : 'naver';
+    // 기존 데이터 하위 호환: naver_import는 네이버
+    return p.source === 'naver_import' ? 'naver' : 'kakao';
   }
 
   const provider = getMapProvider(place);
-  const mapUrl = provider === 'kakao'
-    ? `https://place.map.kakao.com/${place.placeId}`
-    : `https://map.naver.com/p/entry/place/${place.placeId}`;
-  const mapLabel = provider === 'kakao' ? '카카오 지도' : '네이버 지도';
-  const mapButtonClass = provider === 'kakao'
-    ? 'flex-shrink-0 px-4 py-2 bg-yellow-400 text-gray-900 text-sm font-medium rounded-lg hover:bg-yellow-500 transition-colors'
-    : 'flex-shrink-0 px-4 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors';
+
+  // 주소에서 "구"까지만 추출 (예: "서울특별시 강남구 역삼동 123" → "강남구")
+  function getShortAddress(address: string): string {
+    const match = address.match(/([가-힣]+구)/);
+    return match ? match[1] : '';
+  }
+
+  const shortAddress = getShortAddress(place.address);
+  const searchQuery = encodeURIComponent(place.name + (shortAddress ? ' ' + shortAddress : ''));
+
+  // 네이버 지도 URL (항상 표시: 직접 링크 또는 검색)
+  const naverUrl = provider === 'naver'
+    ? `https://map.naver.com/p/entry/place/${place.placeId}` // 네이버 ID가 있으면 직접 링크
+    : `https://map.naver.com/search/${searchQuery}`; // 없으면 검색
+
+  // 카카오 지도 URL (항상 표시: 직접 링크 또는 검색)
+  const kakaoUrl = provider === 'kakao'
+    ? `https://place.map.kakao.com/${place.placeId}` // 카카오 ID가 있으면 직접 링크
+    : `https://map.kakao.com/?q=${searchQuery}`; // 없으면 검색
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -299,14 +311,26 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
                 <h2 className="text-2xl font-bold text-gray-900">{place.name}</h2>
                 <p className="mt-1 text-sm text-gray-500">{place.category}</p>
               </div>
-              <a
-                href={mapUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={mapButtonClass}
-              >
-                {mapLabel}
-              </a>
+              <div className="flex gap-2 flex-shrink-0">
+                {/* 네이버 지도 버튼 (항상 표시) */}
+                <a
+                  href={naverUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 bg-green-500 text-white text-sm font-medium rounded-lg hover:bg-green-600 transition-colors"
+                >
+                  네이버
+                </a>
+                {/* 카카오 지도 버튼 (항상 표시) */}
+                <a
+                  href={kakaoUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3 py-2 bg-yellow-400 text-gray-900 text-sm font-medium rounded-lg hover:bg-yellow-500 transition-colors"
+                >
+                  카카오
+                </a>
+              </div>
             </div>
 
             <div className="mt-4 space-y-2">

@@ -165,11 +165,13 @@ export default function PlaceBottomSheet({ place, onClose }: PlaceBottomSheetPro
               <span className="inline-flex items-center px-2 py-1 rounded-md bg-blue-50 text-blue-700 text-xs font-medium">
                 {place.category}
               </span>
-              {place.source === 'naver_import' && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-500 text-white text-xs font-medium">
-                  네이버
-                </span>
-              )}
+              {/* 상세 페이지에서 네이버/카카오 둘 다 연동 가능하므로 뱃지 둘 다 표시 */}
+              <span className="inline-flex items-center px-2 py-1 rounded-md bg-green-500 text-white text-xs font-medium">
+                네이버
+              </span>
+              <span className="inline-flex items-center px-2 py-1 rounded-md bg-yellow-400 text-gray-900 text-xs font-medium">
+                카카오
+              </span>
             </div>
           </div>
 

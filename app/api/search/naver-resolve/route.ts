@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
     const clientSecret = process.env.NAVER_SEARCH_CLIENT_SECRET;
 
     if (!clientId || !clientSecret) {
+      console.warn('[naver-resolve] NAVER_SEARCH_CLIENT_ID 또는 NAVER_SEARCH_CLIENT_SECRET 미설정');
       return NextResponse.json({ naverPlaceId: null });
     }
 
@@ -49,9 +50,12 @@ export async function GET(request: NextRequest) {
 
     const data = await response.json();
 
+    console.log(`[naver-resolve] 검색: "${name}", 좌표: (${lat}, ${lng}), 결과: ${data.items?.length || 0}개`);
+
     // 각 결과에서 좌표 근접 매칭
     let bestMatch: string | null = null;
     let bestDistance = Infinity;
+    let bestName = '';
 
     for (const item of data.items) {
       // 네이버 카텍 좌표 → WGS84 근사 변환
@@ -63,20 +67,31 @@ export async function GET(request: NextRequest) {
       const dy = (lat - itemLat) * 111000;
       const distance = Math.sqrt(dx * dx + dy * dy);
 
-      if (distance < bestDistance) {
-        bestDistance = distance;
-
-        // 링크에서 placeId 추출
-        const linkMatch = item.link?.match(/place\/(\d+)/);
+      // 링크에서 placeId 추출 (여러 패턴 지원)
+      let placeId: string | null = null;
+      if (item.link) {
+        // 패턴 1: https://map.naver.com/p/entry/place/12345...
+        // 패턴 2: https://map.naver.com/place/12345...
+        // 패턴 3: https://naver.me/... (단축 URL - 추출 불가)
+        const linkMatch = item.link.match(/place\/(\d+)/) || item.link.match(/entry\/place\/(\d+)/);
         if (linkMatch) {
-          bestMatch = linkMatch[1];
+          placeId = linkMatch[1];
         }
+      }
+
+      if (distance < bestDistance && placeId) {
+        bestDistance = distance;
+        bestMatch = placeId;
+        bestName = item.title?.replace(/<[^>]*>/g, '') || '';
       }
     }
 
-    // 200m 이내 매칭만 유효
-    if (bestDistance > 200) {
+    // 300m 이내 매칭만 유효 (200m → 300m로 완화)
+    if (bestDistance > 300) {
+      console.log(`[naver-resolve] 매칭 실패: 최소 거리 ${bestDistance.toFixed(0)}m > 300m`);
       bestMatch = null;
+    } else if (bestMatch) {
+      console.log(`[naver-resolve] 매칭 성공: "${bestName}" (ID: ${bestMatch}, 거리: ${bestDistance.toFixed(0)}m)`);
     }
 
     return NextResponse.json({ naverPlaceId: bestMatch });
