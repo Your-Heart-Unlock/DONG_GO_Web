@@ -37,10 +37,10 @@ export default function AdminLayout({
                     사용자
                   </Link>
                   <Link
-                    href="/admin/places"
+                    href="/admin/categories"
                     className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
                   >
-                    장소
+                    카테고리
                   </Link>
                   <Link
                     href="/admin/security-test"
