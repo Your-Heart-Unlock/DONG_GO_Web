@@ -23,6 +23,12 @@ export default function AdminDashboard() {
   const [stats, setStats] = useState<AdminStats | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
 
+  // QRS 관련 상태
+  const [backfillResult, setBackfillResult] = useState<string | null>(null);
+  const [backfilling, setBackfilling] = useState(false);
+  const [snapshotResult, setSnapshotResult] = useState<string | null>(null);
+  const [snapshotting, setSnapshotting] = useState(false);
+
   const handleMigrateCellId = async () => {
     if (!auth?.currentUser) {
       setMigrateResult('로그인이 필요합니다.');
@@ -100,6 +106,64 @@ export default function AdminDashboard() {
       setRegistrantsResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
     } finally {
       setMigratingRegistrants(false);
+    }
+  };
+
+  // QRS: Backfill Aggregates
+  const handleBackfillAggregates = async () => {
+    if (!auth?.currentUser) {
+      setBackfillResult('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!confirm('기존 리뷰 데이터를 기반으로 월별 통계를 생성합니다. 계속하시겠습니까?')) {
+      return;
+    }
+
+    setBackfilling(true);
+    setBackfillResult(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/backfill-aggregates', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setBackfillResult(
+        `완료: 처리 ${data.processedReviews}개 / 스킵 ${data.skippedReviews}개 / 저장 ${data.totalWrites}개\n월: ${data.monthKeys?.join(', ') || '없음'}`
+      );
+    } catch (err) {
+      setBackfillResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setBackfilling(false);
+    }
+  };
+
+  // QRS: Trigger Snapshot
+  const handleTriggerSnapshot = async () => {
+    if (!auth?.currentUser) {
+      setSnapshotResult('로그인이 필요합니다.');
+      return;
+    }
+
+    setSnapshotting(true);
+    setSnapshotResult(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/trigger-snapshot', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setSnapshotResult(
+        `완료: ${data.monthKey}\n리더보드: 종합 ${data.result?.leaderboard?.overallCount || 0}명, 카테고리 챔피언 ${data.result?.leaderboard?.categoryWinnerCount || 0}명\n통계: 리뷰 ${data.result?.serviceStats?.totalReviews || 0}개, 활성 사용자 ${data.result?.serviceStats?.activeUsers || 0}명`
+      );
+    } catch (err) {
+      setSnapshotResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setSnapshotting(false);
     }
   };
 
@@ -191,6 +255,40 @@ export default function AdminDashboard() {
           </div>
           <p className="text-sm text-gray-600">
             삭제/수정 요청 승인 및 거부
+          </p>
+        </Link>
+
+        <Link
+          href="/leaderboard"
+          className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">명예의 전당</h3>
+          </div>
+          <p className="text-sm text-gray-600">
+            리뷰왕, 기록왕, 카테고리 챔피언 리더보드
+          </p>
+        </Link>
+
+        <Link
+          href="/stats"
+          className="block p-6 bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200"
+        >
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900">서비스 통계</h3>
+          </div>
+          <p className="text-sm text-gray-600">
+            전체 리뷰, 장소, 등급 분포 통계
           </p>
         </Link>
       </div>
@@ -295,6 +393,51 @@ export default function AdminDashboard() {
           {registrantsResult && (
             <p className={`mt-3 text-sm whitespace-pre-line ${registrantsResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
               {registrantsResult}
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* QRS: 리더보드/통계 */}
+      <div className="bg-white rounded-lg shadow border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">리더보드 / 통계 (QRS)</h2>
+
+        {/* Backfill Aggregates */}
+        <div className="mb-6 pb-6 border-b border-gray-200">
+          <h3 className="text-sm font-medium text-gray-800 mb-2">1. Backfill Aggregates</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            기존 리뷰 데이터를 스캔하여 월별 사용자 통계(monthly_user_stats)를 생성합니다. (1회성)
+          </p>
+          <button
+            onClick={handleBackfillAggregates}
+            disabled={backfilling}
+            className="px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {backfilling ? 'Backfill 중...' : 'Backfill 실행'}
+          </button>
+          {backfillResult && (
+            <p className={`mt-3 text-sm whitespace-pre-line ${backfillResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
+              {backfillResult}
+            </p>
+          )}
+        </div>
+
+        {/* Trigger Snapshot */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-800 mb-2">2. Snapshot 트리거</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            현재 월의 리더보드(monthly_leaderboard)와 서비스 통계(monthly_service_stats)를 생성합니다.
+          </p>
+          <button
+            onClick={handleTriggerSnapshot}
+            disabled={snapshotting}
+            className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {snapshotting ? 'Snapshot 생성 중...' : 'Snapshot 생성'}
+          </button>
+          {snapshotResult && (
+            <p className={`mt-3 text-sm whitespace-pre-line ${snapshotResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
+              {snapshotResult}
             </p>
           )}
         </div>
