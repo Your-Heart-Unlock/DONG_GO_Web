@@ -155,9 +155,9 @@ export default function NaverMapView({
     if (!map) return;
 
     const currentZoom = map.getZoom();
-    const showClusters = currentZoom <= CLUSTER_MAX_ZOOM && !isFilterActiveRef.current;
+    const showClusters = currentZoom <= CLUSTER_MAX_ZOOM;
 
-    console.log('[NaverMapView] 마커/클러스터 업데이트:', { zoom: currentZoom, showClusters });
+    console.log('[NaverMapView] 마커/클러스터 업데이트:', { zoom: currentZoom, showClusters, isFilterActive: isFilterActiveRef.current });
 
     // 기존 클러스터 마커 제거
     clusterMarkersRef.current.forEach((marker) => marker.setMap(null));
@@ -167,15 +167,19 @@ export default function NaverMapView({
       // 클러스터 모드: 개별 마커 숨기고 클러스터 표시
       markerMapRef.current.forEach((marker) => marker.setVisible(false));
 
-      // 클러스터링에는 전체 장소 데이터 사용 (allPlaces가 있으면 사용, 없으면 places 사용)
-      const placesForClustering = allPlacesRef.current.length > 0 ? allPlacesRef.current : placesRef.current;
+      // 필터 활성화 시: 필터된 장소(places)로 클러스터링
+      // 필터 비활성화 시: 전체 장소(allPlaces)로 클러스터링 (없으면 places 사용)
+      const placesForClustering = isFilterActiveRef.current
+        ? placesRef.current
+        : (allPlacesRef.current.length > 0 ? allPlacesRef.current : placesRef.current);
+
       const clusters = clusterPlaces(placesForClustering, currentZoom);
       clusters.forEach((cluster) => {
         const clusterMarker = createClusterMarker(cluster, map);
         clusterMarkersRef.current.push(clusterMarker);
       });
 
-      console.log('[NaverMapView] 클러스터 생성:', clusters.length, '개 (줌:', currentZoom, ', 전체장소:', placesForClustering.length, '개, 그리드:', getGridSizeForZoom(currentZoom), ')');
+      console.log('[NaverMapView] 클러스터 생성:', clusters.length, '개 (줌:', currentZoom, ', 장소:', placesForClustering.length, '개, 필터:', isFilterActiveRef.current, ', 그리드:', getGridSizeForZoom(currentZoom), ')');
     } else {
       // 개별 마커 모드: 클러스터 숨기고 개별 마커 표시
       markerMapRef.current.forEach((marker) => marker.setVisible(true));
@@ -247,7 +251,7 @@ export default function NaverMapView({
     const map = mapInstanceRef.current;
     const currentPlaceIds = new Set(places.map((p) => p.placeId));
     const currentZoom = map.getZoom();
-    const showClusters = currentZoom <= CLUSTER_MAX_ZOOM && !isFilterActive;
+    const showClusters = currentZoom <= CLUSTER_MAX_ZOOM;
 
     console.log('[NaverMapView] 마커 렌더링 시작:', { placesCount: places.length });
 
