@@ -275,3 +275,39 @@ export interface MonthlyServiceStats {
     reviewCount: number;
   }[];
 }
+
+// ===== Badge System Types =====
+
+/** Badge condition type */
+export type BadgeConditionType = 'review_count' | 'place_add' | 'tier_s' | 'avg_tier' | 'category_reviews';
+
+/** Badge rarity */
+export type BadgeRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+/** Badge definition */
+export interface Badge {
+  badgeId: string;
+  name: string;
+  description: string;
+  icon: string; // emoji
+  condition: {
+    type: BadgeConditionType;
+    threshold: number;
+    categoryKey?: CategoryKey; // for category_reviews type
+  };
+  rarity: BadgeRarity;
+}
+
+/** User's earned badge record */
+export interface UserBadge {
+  badgeId: string;
+  earnedAt: Date;
+}
+
+/** User's badge collection (stored at user_badges/{uid}) */
+export interface UserBadgeCollection {
+  uid: string;
+  badges: UserBadge[];
+  representativeBadgeId?: string; // 대표 뱃지
+  updatedAt: Date;
+}

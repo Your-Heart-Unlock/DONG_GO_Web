@@ -234,6 +234,13 @@ export async function createReview(review: {
   } catch (error) {
     console.warn('Monthly user stats 업데이트 실패 (리뷰는 저장됨):', error);
   }
+
+  // 뱃지 체크 (비동기로 실행, 실패해도 무시)
+  import('@/lib/firebase/badges').then(({ checkAndAwardBadges }) => {
+    checkAndAwardBadges(review.uid).catch((error) => {
+      console.warn('뱃지 체크 실패 (리뷰는 저장됨):', error);
+    });
+  });
 }
 
 /**
