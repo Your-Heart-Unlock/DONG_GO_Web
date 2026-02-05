@@ -11,6 +11,7 @@ import PlaceBottomSheet from '@/components/map/PlaceBottomSheet';
 import SearchBar, { SearchResultItem } from '@/components/map/SearchBar';
 import { getCellIdsForBounds } from '@/lib/utils/cellId';
 import { Place, FilterState } from '@/types';
+import HallOfFamePreview from '@/components/HallOfFamePreview';
 
 const MAP_STATE_STORAGE_KEY = 'donggo_map_state';
 const CLUSTER_MAX_ZOOM = 14; // 이 줌 이하에서는 클러스터링 표시
@@ -428,6 +429,13 @@ export default function HomePage() {
           onQueryChange={handleQueryChange}
         />
       </div>
+
+      {/* 명예의 전당 미리보기 (member/owner만) */}
+      {(user?.role === 'member' || user?.role === 'owner') && (
+        <div className="absolute top-36 left-4 z-20">
+          <HallOfFamePreview />
+        </div>
+      )}
 
       {/* Map */}
       <div className="flex-1 relative">
