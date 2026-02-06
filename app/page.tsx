@@ -62,6 +62,10 @@ export default function HomePage() {
   const loadingCellIdsRef = useRef<Set<string>>(new Set());
   // 지도 재마운트용 key (필터 초기화 시)
   const [mapKey, setMapKey] = useState(0);
+  // 필터 패널 열림 상태
+  const [isFilterPanelOpen, setIsFilterPanelOpen] = useState(false);
+  // 식당 리스트 접힘 상태
+  const [isPlaceListCollapsed, setIsPlaceListCollapsed] = useState(false);
 
   const highlightedPlaceId = hoveredPlaceId ?? selectedPlace?.placeId ?? null;
   const showVisiblePlacesPanel = currentZoom > CLUSTER_MAX_ZOOM && currentBounds !== null;
@@ -443,6 +447,7 @@ export default function HomePage() {
         <SearchBar
           placeholder="장소 검색.."
           onFilterChange={handleFilterChange}
+          onFilterPanelOpenChange={setIsFilterPanelOpen}
           searchResults={searchResults}
           searchLoading={searchLoading}
           searchTotal={searchTotal}
@@ -452,10 +457,12 @@ export default function HomePage() {
         />
       </div>
 
-      {/* 명예의 전당 미리보기 (member/owner만) */}
+      {/* 명예의 전당 미리보기 (member/owner만) - 맛집 추가 버튼 위에 배치 */}
       {(user?.role === 'member' || user?.role === 'owner') && (
-        <div className="absolute top-36 left-4 md:left-auto md:right-4 z-20">
-          <HallOfFamePreview />
+        <div className={`absolute bottom-44 md:bottom-24 right-4 z-20 ${isFilterPanelOpen ? 'pointer-events-none' : ''}`}>
+          <div className={`relative ${isFilterPanelOpen ? 'after:absolute after:inset-0 after:bg-black/40 after:rounded-xl after:z-10' : ''}`}>
+            <HallOfFamePreview expandDirection="up" />
+          </div>
         </div>
       )}
 
@@ -474,50 +481,74 @@ export default function HomePage() {
         />
 
         {showVisiblePlacesPanel && (
-          <aside className="absolute top-52 left-4 z-20 hidden md:block w-80">
-            <div className="rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
-                <p className="text-sm font-semibold text-gray-800">Visible Restaurants</p>
-                <p className="text-xs text-gray-500 mt-1">{visiblePlaces.length} shown</p>
-              </div>
-              {visiblePlaces.length === 0 ? (
-                <div className="px-4 py-8 text-center text-sm text-gray-500">
-                  현재 영역에 표시되는 장소가 없습니다.
+          <aside className={`absolute bottom-24 left-4 z-20 hidden md:block w-80 ${isFilterPanelOpen ? 'pointer-events-none' : ''}`}>
+            <div className="relative flex flex-col items-start">
+              {/* 리스트 (위로 펼쳐짐) */}
+              {!isPlaceListCollapsed && (
+                <div className="mb-2 w-full rounded-xl border-2 border-gray-300 bg-white shadow-xl overflow-hidden">
+                  {visiblePlaces.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-gray-500">
+                      현재 영역에 표시되는 장소가 없습니다.
+                    </div>
+                  ) : (
+                    <ul className="max-h-[50vh] overflow-y-auto divide-y divide-gray-100">
+                      {visiblePlaces.map((place) => {
+                        const isActive = highlightedPlaceId === place.placeId;
+                        return (
+                          <li key={place.placeId}>
+                            <button
+                              type="button"
+                              onMouseEnter={() => setHoveredPlaceId(place.placeId)}
+                              onMouseLeave={() => setHoveredPlaceId(null)}
+                              onFocus={() => setHoveredPlaceId(place.placeId)}
+                              onBlur={() => setHoveredPlaceId(null)}
+                              onClick={() => handleVisiblePlaceClick(place)}
+                              className={`w-full text-left px-4 py-3 transition-colors ${
+                                isActive ? 'bg-blue-50' : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>
+                                  {place.name}
+                                </p>
+                                {place.avgTier && (
+                                  <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">
+                                    {place.avgTier}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="mt-1 text-xs text-gray-500 line-clamp-1">{place.address}</p>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
+                  {isFilterPanelOpen && <div className="absolute inset-0 bg-black/40 rounded-xl z-10" />}
                 </div>
-              ) : (
-                <ul className="max-h-[55vh] overflow-y-auto divide-y divide-gray-100">
-                  {visiblePlaces.map((place) => {
-                    const isActive = highlightedPlaceId === place.placeId;
-                    return (
-                      <li key={place.placeId}>
-                        <button
-                          type="button"
-                          onMouseEnter={() => setHoveredPlaceId(place.placeId)}
-                          onMouseLeave={() => setHoveredPlaceId(null)}
-                          onFocus={() => setHoveredPlaceId(place.placeId)}
-                          onBlur={() => setHoveredPlaceId(null)}
-                          onClick={() => handleVisiblePlaceClick(place)}
-                          className={`w-full text-left px-4 py-3 transition-colors ${
-                            isActive ? 'bg-blue-50' : 'hover:bg-gray-50'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>
-                              {place.name}
-                            </p>
-                            {place.avgTier && (
-                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">
-                                {place.avgTier}
-                              </span>
-                            )}
-                          </div>
-                          <p className="mt-1 text-xs text-gray-500 line-clamp-1">{place.address}</p>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
               )}
+              {/* 하단 헤더 (고정) */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setIsPlaceListCollapsed(!isPlaceListCollapsed)}
+                  className="flex items-center gap-3 px-4 py-3 bg-white rounded-xl border-2 border-gray-300 shadow-xl hover:bg-gray-50 transition-colors"
+                >
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-800">Visible Restaurants</p>
+                    <p className="text-xs text-gray-500">{visiblePlaces.length} shown</p>
+                  </div>
+                  <svg
+                    className={`w-5 h-5 text-gray-600 transition-transform ${isPlaceListCollapsed ? 'rotate-180' : ''}`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                  </svg>
+                </button>
+                {isFilterPanelOpen && <div className="absolute inset-0 bg-black/40 rounded-xl z-10" />}
+              </div>
             </div>
           </aside>
         )}

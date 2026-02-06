@@ -7,7 +7,11 @@ import { doc, getDoc } from 'firebase/firestore';
 import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/monthKey';
 import { MonthlyLeaderboard } from '@/types';
 
-export default function HallOfFamePreview() {
+interface HallOfFamePreviewProps {
+  expandDirection?: 'down' | 'up';
+}
+
+export default function HallOfFamePreview({ expandDirection = 'down' }: HallOfFamePreviewProps) {
   const [leaderboard, setLeaderboard] = useState<MonthlyLeaderboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -85,7 +89,7 @@ export default function HallOfFamePreview() {
         </button>
       ) : (
         /* 확장된 상태 - 미니 리더보드 */
-        <div className="bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 rounded-2xl shadow-xl border-2 border-yellow-300 overflow-hidden w-72 animate-in fade-in zoom-in-95 duration-200">
+        <div className={`bg-gradient-to-br from-yellow-50 via-amber-50 to-yellow-100 rounded-2xl shadow-xl border-2 border-yellow-300 overflow-hidden w-72 animate-in fade-in zoom-in-95 duration-200 ${expandDirection === 'up' ? 'absolute bottom-full right-0 mb-2' : ''}`}>
           {/* 헤더 */}
           <div className="bg-gradient-to-r from-yellow-400 via-amber-400 to-yellow-500 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
