@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -14,14 +14,23 @@ import { Place, FilterState } from '@/types';
 import HallOfFamePreview from '@/components/HallOfFamePreview';
 
 const MAP_STATE_STORAGE_KEY = 'donggo_map_state';
-const CLUSTER_MAX_ZOOM = 14; // 이 줌 이하에서는 클러스터링 표시
+const CLUSTER_MAX_ZOOM = 14; // ???????????꾩룆梨띰쭕???????????????????獄쏅챶留????硫명떈????????
+function isPlaceInBounds(place: Place, bounds: MapBounds): boolean {
+  return (
+    place.lat >= bounds.sw.lat &&
+    place.lat <= bounds.ne.lat &&
+    place.lng >= bounds.sw.lng &&
+    place.lng <= bounds.ne.lng
+  );
+}
 
 export default function HomePage() {
   const router = useRouter();
   const { firebaseUser, user, loading } = useAuth();
   const [places, setPlaces] = useState<Place[]>([]);
-  const [allPlaces, setAllPlaces] = useState<Place[]>([]); // 클러스터링용 전체 장소
+  const [allPlaces, setAllPlaces] = useState<Place[]>([]);
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
+  const [hoveredPlaceId, setHoveredPlaceId] = useState<string | null>(null);
   const [loadingPlaces, setLoadingPlaces] = useState(false);
   const [filterState, setFilterState] = useState<FilterState>({
     isActive: false,
@@ -30,28 +39,41 @@ export default function HomePage() {
   const [currentBounds, setCurrentBounds] = useState<MapBounds | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number>(12);
 
-  // 지도 상태 (줌, 중심 좌표)
+  // ????븐뼐??????????????椰????(?? ??????ш끽踰椰?????袁ㅻ쇀????????亦껋꼦維????
   const [mapCenter, setMapCenter] = useState<{ lat: number; lng: number }>({ lat: 37.5665, lng: 126.978 });
   const [mapZoom, setMapZoom] = useState<number>(12);
 
-  // 검색 상태
+  // ??癲됱빖???嶺??????????椰????
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>();
   const [searchLoading, setSearchLoading] = useState(false);
   const [searchTotal, setSearchTotal] = useState<number>();
   const pendingSelectRef = useRef<string | null>(null);
 
-  // 클라이언트 캐시: 이미 로드된 placeId는 재요청하지 않음
+  // ??????????濚밸Ŧ援????????? ???? ???????????ｋ젒???placeId???????????딅??嶺????????? ???????繹먮굞???
   const loadedPlaceIdsRef = useRef<Set<string>>(new Set());
-  // 이미 쿼리한 cellId 추적
+  // ???? ????????cellId ??????熬곣몿????
   const loadedCellIdsRef = useRef<Set<string>>(new Set());
-  // 초기 로딩이 완료되었는지 추적
+  // ??????嶺뚮∥????????????沃섃뫚???????????袁⑸즴筌?씛彛???????? ??????熬곣몿????
   const hasInitialLoadedRef = useRef(false);
-  // 전체 장소 로드 완료 여부
+  // ??????袁⑸즴筌?씛彛?????????????????ｋ젒????????袁⑸즴筌?씛彛?????
   const allPlacesLoadedRef = useRef(false);
-  // 지도 컴포넌트 재마운트를 위한 key
+  const allPlacesLoadingRef = useRef(false);
+  const loadingCellIdsRef = useRef<Set<string>>(new Set());
+  // ????븐뼐????????????????????熬곣몿?????????????꾩룆梨띰쭕??????????????뀀???살꽏?????key
   const [mapKey, setMapKey] = useState(0);
 
-  // 페이지 로드 시 저장된 지도 상태 복원
+  const highlightedPlaceId = hoveredPlaceId ?? selectedPlace?.placeId ?? null;
+  const showVisiblePlacesPanel = currentZoom > CLUSTER_MAX_ZOOM && currentBounds !== null;
+
+  const visiblePlaces = useMemo(() => {
+    if (!showVisiblePlacesPanel || !currentBounds) return [];
+
+    return places
+      .filter((place) => isPlaceInBounds(place, currentBounds))
+      .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  }, [places, currentBounds, showVisiblePlacesPanel]);
+
+  // ??????⑤슢堉??곕???????????? ???????????ｋ젒???????????蹂㏓??嶺뚮㉡???????????븐뼐??????????????椰??????????⑤벡瑜??꿔꺂??????
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -60,68 +82,64 @@ export default function HomePage() {
       try {
         const { center, zoom } = JSON.parse(savedState);
         if (center?.lat && center?.lng && zoom) {
-          console.log('[HomePage] 지도 상태 복원:', { center, zoom });
+          console.log('[HomePage] ????븐뼐??????????????椰??????????⑤벡瑜??꿔꺂??????', { center, zoom });
           setMapCenter(center);
           setMapZoom(zoom);
-          // 복원 시에는 초기 로딩 플래그를 리셋하여 데이터 재로딩 강제
+          // ??????⑤벡瑜??꿔꺂???????????????????嶺뚮∥????????????沃섃뫚?????????????????????類ㅻ첐?? ??????醫딇떍??????耀붾굝?????????????????????????????ル?????
           hasInitialLoadedRef.current = false;
-          // 지도 컴포넌트를 강제로 재마운트하여 초기화 로직 실행
+          // ????븐뼐????????????????????熬곣몿???????????ル??????????????源낆쭍????????????꾩룆梨띰쭕?????耀붾굝??????????????嶺뚮∥????????????雅?퍔瑗?땟???????????
           setMapKey(prev => prev + 1);
         }
       } catch (error) {
-        console.error('지도 상태 복원 실패:', error);
+        console.error('????븐뼐??????????????椰??????????⑤벡瑜??꿔꺂???????????????곕츧??', error);
       }
     }
   }, []);
 
-  // 클러스터링용 전체 장소 로드
+  // ???????????獄쏅챶留????硫명떈???????????????袁⑸즴筌?씛彛?????????????????ｋ젒??
   const loadAllPlaces = useCallback(async () => {
-    if (allPlacesLoadedRef.current) {
-      console.log('[HomePage] 전체 장소 이미 로드됨, 스킵');
+    if (allPlacesLoadedRef.current || allPlacesLoadingRef.current) {
       return;
     }
 
-    console.log('[HomePage] 클러스터링용 전체 장소 로딩 시작');
+    allPlacesLoadingRef.current = true;
     try {
       const response = await fetch('/api/places/all');
       if (response.ok) {
         const data = await response.json();
         setAllPlaces(data.places);
         allPlacesLoadedRef.current = true;
-        console.log(`[HomePage] 전체 장소 로드 완료: ${data.places.length}개`);
       }
     } catch (error) {
-      console.error('[HomePage] 전체 장소 로딩 실패:', error);
+      console.error('[HomePage] failed to load all places:', error);
+    } finally {
+      allPlacesLoadingRef.current = false;
     }
   }, []);
 
-  // Bounds 기반 장소 로딩 함수 (재사용 가능)
+  // Bounds ???????????????????????????沃섃뫚?????????(????????????ル?????
   const loadPlacesByBounds = useCallback(async (bounds: MapBounds) => {
     const cellIds = getCellIdsForBounds(bounds);
 
-    // cellIds가 null이면 줌이 너무 낮아서 쿼리 불가
     if (!cellIds) {
-      console.log('[HomePage] 줌 레벨 너무 낮음, 마커 표시 안 함');
       return;
     }
 
-    // 이미 로드된 셀 제외
-    const newCellIds = cellIds.filter((id) => !loadedCellIdsRef.current.has(id));
+    const newCellIds = cellIds.filter(
+      (id) => !loadedCellIdsRef.current.has(id) && !loadingCellIdsRef.current.has(id)
+    );
     if (newCellIds.length === 0) {
-      console.log('[HomePage] 모든 셀 이미 로드됨, 스킵');
       return;
     }
 
-    console.log(`[HomePage] 새로운 셀 ${newCellIds.length}개 로딩 시작`);
+    newCellIds.forEach((id) => loadingCellIdsRef.current.add(id));
     setLoadingPlaces(true);
 
     try {
       const newPlaces = await getPlacesByCellIds(newCellIds);
 
-      // 로드된 셀 기록
       newCellIds.forEach((id) => loadedCellIdsRef.current.add(id));
 
-      // 중복 제거 후 추가
       const uniqueNewPlaces = newPlaces.filter(
         (p) => !loadedPlaceIdsRef.current.has(p.placeId)
       );
@@ -129,31 +147,25 @@ export default function HomePage() {
       if (uniqueNewPlaces.length > 0) {
         uniqueNewPlaces.forEach((p) => loadedPlaceIdsRef.current.add(p.placeId));
         setPlaces((prev) => [...prev, ...uniqueNewPlaces]);
-        console.log(`[HomePage] ${uniqueNewPlaces.length}개 장소 추가, 총 ${loadedPlaceIdsRef.current.size}개`);
-      } else {
-        console.log('[HomePage] 새로운 장소 없음 (중복 제거 후)');
       }
     } catch (error) {
-      console.error('[HomePage] 장소 로딩 실패:', error);
+      console.error('[HomePage] failed to load places by bounds:', error);
     } finally {
+      newCellIds.forEach((id) => loadingCellIdsRef.current.delete(id));
       setLoadingPlaces(false);
     }
   }, []);
 
   const handleBoundsChange = useCallback(async (bounds: MapBounds, zoom: number) => {
-    console.log(`[HomePage] handleBoundsChange 호출됨, zoom: ${zoom}, 필터 활성: ${filterState.isActive}, 초기로드완료: ${hasInitialLoadedRef.current}`);
-
-    // 현재 bounds와 zoom 저장
     setCurrentBounds(bounds);
     setCurrentZoom(zoom);
+    setMapZoom((prev) => (prev === zoom ? prev : zoom));
 
-    // 지도 중심 좌표 계산
     const center = {
       lat: (bounds.sw.lat + bounds.ne.lat) / 2,
       lng: (bounds.sw.lng + bounds.ne.lng) / 2,
     };
 
-    // 지도 상태를 sessionStorage에 저장
     if (typeof window !== 'undefined') {
       try {
         sessionStorage.setItem(
@@ -161,26 +173,20 @@ export default function HomePage() {
           JSON.stringify({ center, zoom })
         );
       } catch (error) {
-        console.error('지도 상태 저장 실패:', error);
+        console.error('failed to persist map state:', error);
       }
     }
 
-    // 필터가 활성화된 상태면 bounds 기반 로딩 스킵
     if (filterState.isActive) {
-      console.log('[HomePage] 필터 활성화 상태, bounds 로딩 스킵');
       return;
     }
 
-    // 클러스터링 모드 (줌 14 이하)에서는 전체 장소 로드
     if (zoom <= CLUSTER_MAX_ZOOM) {
       await loadAllPlaces();
     }
 
-    // 초기 로딩이 아직 안 된 경우 강제로 데이터 로드
     if (!hasInitialLoadedRef.current) {
-      console.log('[HomePage] 초기 로딩 강제 실행');
       hasInitialLoadedRef.current = true;
-      // 캐시 초기화하여 확실하게 데이터 로드
       loadedCellIdsRef.current.clear();
       loadedPlaceIdsRef.current.clear();
     }
@@ -192,11 +198,11 @@ export default function HomePage() {
     try {
       await signOut();
     } catch (error) {
-      console.error('로그아웃 실패:', error);
+      console.error('????????????袁⑸즴筌?씛彛???????????곕츧??', error);
     }
   };
 
-  // 검색 키워드 변경 → API 호출
+  // ??癲됱빖???嶺???????????롮쾸?椰???⑤챶琉덆땡????????⑤벡瑜??????API ???遺얘턁???????
   const handleQueryChange = useCallback(async (query: string) => {
     setSearchLoading(true);
     try {
@@ -215,7 +221,7 @@ export default function HomePage() {
     }
   }, []);
 
-  // 검색 결과 클릭 → 지도 이동 + 바텀시트 표시
+  // ??癲됱빖???嶺??????癲됱빖???嶺???????????????븐뼐?????????????+ ?????獄쏅챶留덌┼????????????????????
   const handleResultClick = useCallback((result: SearchResultItem) => {
     setMapCenter({ lat: result.lat, lng: result.lng });
     setMapZoom(16);
@@ -228,12 +234,23 @@ export default function HomePage() {
     }
   }, [places]);
 
-  // 검색 결과 없을 때 "식당 추가 검색하기" 클릭
+  const handleMarkerClick = useCallback((place: Place) => {
+    setSelectedPlace(place);
+  }, []);
+
+  const handleVisiblePlaceClick = useCallback((place: Place) => {
+    // ??????醫딇떍?????繹먮굞議????????????????袁⑸즴筌?씛彛???????? ??????⑤벡瑜??????????嚥▲굧?먩뤆????????????????
+    setMapZoom((prev) => (prev === currentZoom ? prev : currentZoom));
+    setMapCenter({ lat: place.lat, lng: place.lng });
+    setSelectedPlace(place);
+  }, [currentZoom]);
+
+  // ??癲됱빖???嶺??????癲됱빖???嶺?????????????대첉????"???耀붾굝?????????????熬곣몿??? ??癲됱빖???嶺?????????? ?????
   const handleAddSearchClick = useCallback((query: string) => {
     router.push(`/add?q=${encodeURIComponent(query)}`);
   }, [router]);
 
-  // 검색 결과 클릭 후 places가 로드되면 바텀시트 자동 표시
+  // ??癲됱빖???嶺??????癲됱빖???嶺???????????places???????ル??? ???????????ｋ젒????????????獄쏅챶留덌┼?????????????????????????
   useEffect(() => {
     if (pendingSelectRef.current) {
       const place = places.find((p) => p.placeId === pendingSelectRef.current);
@@ -244,18 +261,24 @@ export default function HomePage() {
     }
   }, [places]);
 
+  useEffect(() => {
+    if (currentZoom <= CLUSTER_MAX_ZOOM && hoveredPlaceId) {
+      setHoveredPlaceId(null);
+    }
+  }, [currentZoom, hoveredPlaceId]);
+
   const handleFilterChange = useCallback(async (newFilterState: FilterState) => {
     setFilterState(newFilterState);
 
-    // 필터가 활성화되지 않은 경우 초기화 후 현재 bounds 재로드
+    // ??????????뀀?????됰Ŧ??怨뺢께????????????쎛 ?????????癲?????猷멤꼻??????嚥싲갭큔??? ??? ??癲됱빖???嶺??????????嶺뚮∥?????????????袁⑸즴筌?씛彛??bounds ?????
     if (!newFilterState.isActive) {
-      // 캐시와 장소 목록 초기화
+      // ?????? ????????븐뼐???????????븐뼔???ш끽維뽭뇡硫㏓꺌?용뿪??큺?????????嶺뚮∥?????
       loadedPlaceIdsRef.current.clear();
       loadedCellIdsRef.current.clear();
       setPlaces([]);
       hasInitialLoadedRef.current = false;
 
-      // 현재 bounds가 있으면 즉시 재로드
+      // ??????袁⑸즴筌?씛彛??bounds???????ル??? ???????롮쾸?椰?嚥▲굧???븍툖????????븐뼐????傭?끆?????Β?ｊ콞?轅붽틓?????⑸걦????????
       if (currentBounds) {
         console.log('[HomePage] Filter disabled, reloading current bounds');
         await loadPlacesByBounds(currentBounds);
@@ -263,7 +286,7 @@ export default function HomePage() {
       return;
     }
 
-    // 필터 적용 전 기존 장소 제거 및 로딩 시작 (마커도 함께 제거됨)
+    // ??????????뀀???????????泥???????????????????????곕?????????????????沃섃뫚???????耀붾굝?????傭?끆????椰?(????븐뼐???????????롪퍓媛앲굜???????????????ろ떀?????????곕????????
     setPlaces([]);
     loadedPlaceIdsRef.current.clear();
     loadedCellIdsRef.current.clear();
@@ -308,7 +331,7 @@ export default function HomePage() {
       if (!response.ok) {
         const errorData = await response.json();
         console.error('[HomePage] Filter API error:', errorData);
-        throw new Error('필터링 실패');
+        throw new Error('Filter API failed');
       }
 
       const data = await response.json();
@@ -320,12 +343,12 @@ export default function HomePage() {
 
       setPlaces(data.places || []);
 
-      // 필터 모드에서는 캐시 무효화
+      // ??????????뀀??????븐뼐???????????븐뼔??????????????????轅붽틓????????
       loadedPlaceIdsRef.current.clear();
       loadedCellIdsRef.current.clear();
     } catch (error) {
-      console.error('필터링 오류:', error);
-      alert('필터링 중 오류가 발생했습니다.');
+      console.error('??????????뀀?????됰Ŧ??????????????ㅻ쑋??', error);
+      alert('??????????뀀?????됰Ŧ????????????????ㅻ쑋????????ル??? ?????獄쏅챶留덌┼????????ル뒌嶺뚮씮??????????????????????⑤챷竊?');
     } finally {
       setLoadingPlaces(false);
     }
@@ -334,7 +357,7 @@ export default function HomePage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <p className="text-gray-500">로딩 중...</p>
+        <p className="text-gray-500">????????沃섃뫚??????..</p>
       </div>
     );
   }
@@ -344,13 +367,13 @@ export default function HomePage() {
       {/* Header */}
       <header className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between shadow-sm z-10">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-gray-900">훈동이 맛집</h1>
+          <h1 className="text-xl font-bold text-gray-900">Dong-go</h1>
           {firebaseUser && (
             <div className="hidden sm:flex items-center gap-2">
               <span className="text-sm text-gray-600">{user?.nickname}</span>
               {user?.role === 'pending' && (
                 <span className="text-xs px-2 py-1 bg-yellow-100 text-yellow-800 rounded-full">
-                  승인대기
+                  ?????????
                 </span>
               )}
             </div>
@@ -361,8 +384,7 @@ export default function HomePage() {
             <Link
               href="/me"
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="내 프로필"
-            >
+              title="Profile"            >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
@@ -372,8 +394,7 @@ export default function HomePage() {
             <Link
               href="/me/wishlist"
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="위시리스트"
-            >
+              title="Wishlist"            >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
               </svg>
@@ -383,8 +404,7 @@ export default function HomePage() {
             <Link
               href="/leaderboard"
               className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-              title="명예의 전당"
-            >
+              title="Leaderboard"            >
               <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
               </svg>
@@ -395,7 +415,7 @@ export default function HomePage() {
               href="/admin"
               className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
             >
-              관리자
+              ???????ㅳ늾????????醫딇떍????
             </Link>
           )}
           {firebaseUser ? (
@@ -403,14 +423,14 @@ export default function HomePage() {
               onClick={handleLogout}
               className="text-sm px-3 py-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             >
-              로그아웃
+              ????????????袁⑸즴筌?씛彛??
             </button>
           ) : (
             <Link
               href="/login"
               className="text-sm px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
             >
-              로그인
+              ????????
             </Link>
           )}
         </div>
@@ -419,7 +439,7 @@ export default function HomePage() {
       {/* Search Bar */}
       <div className="absolute top-20 left-4 right-4 z-20 max-w-md mx-auto">
         <SearchBar
-          placeholder="맛집 검색..."
+          placeholder="????븐뼐?????????雅?퍔瑗?땟?????癲됱빖???嶺????.."
           onFilterChange={handleFilterChange}
           searchResults={searchResults}
           searchLoading={searchLoading}
@@ -430,9 +450,9 @@ export default function HomePage() {
         />
       </div>
 
-      {/* 명예의 전당 미리보기 (member/owner만) */}
+      {/* ????븐뼐??????轅붽틓?????獄쎼끇??????????袁⑸즴筌?씛彛?????????곗뿨????嚥▲굧?먩뤆?????????關?쒎첎?嫄??怨몄겮??(member/owner?? */}
       {(user?.role === 'member' || user?.role === 'owner') && (
-        <div className="absolute top-36 left-4 z-20">
+        <div className="absolute top-36 left-4 md:left-auto md:right-4 z-20">
           <HallOfFamePreview />
         </div>
       )}
@@ -443,14 +463,64 @@ export default function HomePage() {
           key={mapKey}
           places={places}
           allPlaces={allPlaces}
-          onMarkerClick={setSelectedPlace}
+          onMarkerClick={handleMarkerClick}
           onBoundsChange={handleBoundsChange}
           center={mapCenter}
           zoom={mapZoom}
           isFilterActive={filterState.isActive}
+          highlightedPlaceId={highlightedPlaceId}
         />
 
-        {/* 필터 로딩 오버레이 */}
+        {showVisiblePlacesPanel && (
+          <aside className="absolute top-52 left-4 z-20 hidden md:block w-80">
+            <div className="rounded-xl border border-gray-200 bg-white/95 shadow-lg backdrop-blur-sm overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 bg-gray-50">
+                <p className="text-sm font-semibold text-gray-800">Visible Restaurants</p>
+                <p className="text-xs text-gray-500 mt-1">{visiblePlaces.length} shown</p>
+              </div>
+              {visiblePlaces.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-gray-500">
+                  ??????袁⑸즴筌?씛彛??????癲?傭?????????⑤벡瑜????????耀붾굝??????????????濚밸Ŧ援???????????⑤챷竊?
+                </div>
+              ) : (
+                <ul className="max-h-[55vh] overflow-y-auto divide-y divide-gray-100">
+                  {visiblePlaces.map((place) => {
+                    const isActive = highlightedPlaceId === place.placeId;
+                    return (
+                      <li key={place.placeId}>
+                        <button
+                          type="button"
+                          onMouseEnter={() => setHoveredPlaceId(place.placeId)}
+                          onMouseLeave={() => setHoveredPlaceId(null)}
+                          onFocus={() => setHoveredPlaceId(place.placeId)}
+                          onBlur={() => setHoveredPlaceId(null)}
+                          onClick={() => handleVisiblePlaceClick(place)}
+                          className={`w-full text-left px-4 py-3 transition-colors ${
+                            isActive ? 'bg-blue-50' : 'hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <p className={`text-sm font-medium truncate ${isActive ? 'text-blue-700' : 'text-gray-900'}`}>
+                              {place.name}
+                            </p>
+                            {place.avgTier && (
+                              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 flex-shrink-0">
+                                {place.avgTier}
+                              </span>
+                            )}
+                          </div>
+                          <p className="mt-1 text-xs text-gray-500 line-clamp-1">{place.address}</p>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          </aside>
+        )}
+
+        {/* ??????????뀀??????????沃섃뫚????????????源낆┸????????롮쾸?椰???⑤챷寃?┼?*/}
         {loadingPlaces && filterState.isActive && (
           <div className="absolute inset-0 bg-white/60 flex items-center justify-center z-30">
             <div className="bg-white rounded-xl shadow-lg px-6 py-4 flex items-center gap-3">
@@ -475,7 +545,7 @@ export default function HomePage() {
                 />
               </svg>
               <span className="text-sm font-medium text-gray-700">
-                필터 적용 중...
+                ??????????뀀???????????泥????..
               </span>
             </div>
           </div>
@@ -485,29 +555,32 @@ export default function HomePage() {
       {/* Bottom Sheet */}
       <PlaceBottomSheet
         place={selectedPlace}
-        onClose={() => setSelectedPlace(null)}
+        onClose={() => {
+          setSelectedPlace(null);
+          setHoveredPlaceId(null);
+        }}
       />
 
       {/* Status Info */}
       <div className="absolute bottom-28 md:bottom-4 left-4 bg-white rounded-lg shadow-md px-3 py-2 text-xs text-gray-600 z-10">
-        {loadingPlaces ? '로딩 중...' : (
+        {loadingPlaces ? '????????沃섃뫚??????..' : (
           <>
-            {`${places.length}개 장소 표시 중`}
+            {`${places.length} places shown`}
             {filterState.isActive && (
               <span className="ml-2 text-blue-600 font-semibold">
-                (필터 적용됨)
+                (??????????뀀???????????泥???
               </span>
             )}
           </>
         )}
       </div>
 
-      {/* 장소 추가 버튼 (member/owner만) */}
+      {/* ??????????熬곣몿??? ???????(member/owner?? */}
       {(user?.role === 'member' || user?.role === 'owner') && (
         <Link
           href="/add"
           className="absolute bottom-28 md:bottom-6 right-4 z-10 group"
-          aria-label="맛집 추가"
+          aria-label="????븐뼐?????????雅?퍔瑗?땟?????????熬곣몿???"
         >
           <div className="flex items-center gap-2 bg-gradient-to-r from-rose-500 via-pink-500 to-rose-500 text-white pl-4 pr-5 py-3 rounded-full shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 border border-rose-400/30">
             <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
@@ -515,7 +588,7 @@ export default function HomePage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
               </svg>
             </div>
-            <span className="font-semibold text-sm">맛집 추가</span>
+            <span className="font-semibold text-sm">????븐뼐?????????雅?퍔瑗?땟?????????熬곣몿???</span>
           </div>
         </Link>
       )}

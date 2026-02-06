@@ -18,6 +18,7 @@ interface NaverMapViewProps {
   center?: { lat: number; lng: number };
   zoom?: number;
   isFilterActive?: boolean;
+  highlightedPlaceId?: string | null;
 }
 
 interface ClusterGroup {
@@ -28,6 +29,21 @@ interface ClusterGroup {
 }
 
 const CLUSTER_MAX_ZOOM = 14;
+const DEFAULT_MARKER_SIZE = { width: 29, height: 38, anchorX: 14, anchorY: 38 };
+const HIGHLIGHT_MARKER_SIZE = { width: 40, height: 52, anchorX: 20, anchorY: 52 };
+
+function createPlaceMarkerIcon(place: Place, isHighlighted: boolean) {
+  const iconGrade = tierToIconGrade(place.avgTier);
+  const iconPath = getCategoryIconPath(place.categoryKey ?? 'Idle', iconGrade);
+  const size = isHighlighted ? HIGHLIGHT_MARKER_SIZE : DEFAULT_MARKER_SIZE;
+
+  return {
+    url: iconPath,
+    size: new naver.maps.Size(size.width, size.height),
+    scaledSize: new naver.maps.Size(size.width, size.height),
+    anchor: new naver.maps.Point(size.anchorX, size.anchorY),
+  };
+}
 
 /** 줌 레벨에 따른 그리드 크기 반환 (줌아웃할수록 더 넓은 영역 클러스터링) */
 function getGridSizeForZoom(zoom: number): number {
@@ -92,20 +108,24 @@ export default function NaverMapView({
   center = { lat: 37.5665, lng: 126.978 },
   zoom = 12,
   isFilterActive = false,
+  highlightedPlaceId = null,
 }: NaverMapViewProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<naver.maps.Map | null>(null);
   const markerMapRef = useRef<Map<string, naver.maps.Marker>>(new Map());
+  const placeByIdRef = useRef<Map<string, Place>>(new Map());
   const clusterMarkersRef = useRef<naver.maps.Marker[]>([]);
   const onBoundsChangeRef = useRef(onBoundsChange);
   const onMarkerClickRef = useRef(onMarkerClick);
   const isFilterActiveRef = useRef(isFilterActive);
+  const highlightedPlaceIdRef = useRef<string | null>(highlightedPlaceId);
   const placesRef = useRef<Place[]>(places);
   const allPlacesRef = useRef<Place[]>(allPlaces);
 
   onBoundsChangeRef.current = onBoundsChange;
   onMarkerClickRef.current = onMarkerClick;
   isFilterActiveRef.current = isFilterActive;
+  highlightedPlaceIdRef.current = highlightedPlaceId;
   placesRef.current = places;
   allPlacesRef.current = allPlaces;
 
@@ -263,15 +283,25 @@ export default function NaverMapView({
         markersToRemove.push(placeId);
       }
     });
-    markersToRemove.forEach((id) => markerMapRef.current.delete(id));
+    markersToRemove.forEach((id) => {
+      markerMapRef.current.delete(id);
+      placeByIdRef.current.delete(id);
+    });
 
     // 2. 새로운 장소의 마커 추가
     let addedCount = 0;
     places.forEach((place) => {
-      if (markerMapRef.current.has(place.placeId)) return;
+      placeByIdRef.current.set(place.placeId, place);
+      const isHighlighted = highlightedPlaceIdRef.current === place.placeId;
+      const existingMarker = markerMapRef.current.get(place.placeId);
 
-      const iconGrade = tierToIconGrade(place.avgTier);
-      const iconPath = getCategoryIconPath(place.categoryKey ?? 'Idle', iconGrade);
+      if (existingMarker) {
+        existingMarker.setTitle(place.name);
+        existingMarker.setIcon(createPlaceMarkerIcon(place, isHighlighted));
+        existingMarker.setZIndex(isHighlighted ? 3000 : 1000);
+        existingMarker.setVisible(!showClusters);
+        return;
+      }
 
       const marker = new naver.maps.Marker({
         position: new naver.maps.LatLng(place.lat, place.lng),
@@ -279,12 +309,8 @@ export default function NaverMapView({
         title: place.name,
         clickable: true,
         visible: !showClusters,
-        icon: {
-          url: iconPath,
-          size: new naver.maps.Size(29, 38),
-          scaledSize: new naver.maps.Size(29, 38),
-          anchor: new naver.maps.Point(14, 38),
-        },
+        icon: createPlaceMarkerIcon(place, isHighlighted),
+        zIndex: isHighlighted ? 3000 : 1000,
       });
 
       naver.maps.Event.addListener(marker, 'click', () => {
@@ -312,6 +338,20 @@ export default function NaverMapView({
       updateMarkersAndClusters();
     }
   }, [allPlaces, updateMarkersAndClusters]);
+
+  // 리스트 hover/선택 상태를 마커 하이라이트에 반영
+  useEffect(() => {
+    if (!isLoaded || !mapInstanceRef.current) return;
+
+    markerMapRef.current.forEach((marker, placeId) => {
+      const place = placeByIdRef.current.get(placeId);
+      if (!place) return;
+
+      const isHighlighted = highlightedPlaceId === placeId;
+      marker.setIcon(createPlaceMarkerIcon(place, isHighlighted));
+      marker.setZIndex(isHighlighted ? 3000 : 1000);
+    });
+  }, [highlightedPlaceId, isLoaded]);
 
   // Cleanup
   useEffect(() => {
