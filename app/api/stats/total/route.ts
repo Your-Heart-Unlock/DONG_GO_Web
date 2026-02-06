@@ -23,6 +23,13 @@ interface TotalStats {
 
 export async function GET() {
   try {
+    if (!adminDb) {
+      return NextResponse.json(
+        { error: 'Database not initialized' },
+        { status: 500 }
+      );
+    }
+
     // 1. 전체 장소 수
     const placesSnapshot = await adminDb.collection('places').get();
     const totalPlaces = placesSnapshot.size;
