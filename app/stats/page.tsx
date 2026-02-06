@@ -3,15 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { db } from '@/lib/firebase/client';
-import { doc, getDoc } from 'firebase/firestore';
-import { MonthlyServiceStats, RatingTier, CategoryKey } from '@/types';
-import {
-  getCurrentMonthKey,
-  getPreviousMonthKey,
-  getNextMonthKey,
-  formatMonthKey,
-} from '@/lib/utils/monthKey';
+import { RatingTier, CategoryKey } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/utils/categoryIcon';
 
 const TIER_COLORS: Record<RatingTier, { bg: string; bar: string }> = {
@@ -30,35 +22,44 @@ const TIER_LABELS: Record<RatingTier, string> = {
   F: '지뢰',
 };
 
+interface TotalStats {
+  totals: {
+    totalPlaces: number;
+    totalReviews: number;
+    totalUsers: number;
+  };
+  distributions: {
+    tierCounts: Record<string, number>;
+    categoryCounts: Record<string, number>;
+  };
+  topReviewedPlaces: Array<{
+    placeId: string;
+    placeName: string;
+    reviewCount: number;
+  }>;
+  generatedAt: string;
+}
+
 export default function StatsPage() {
   const { user, loading: authLoading } = useAuth();
-  const [monthKey, setMonthKey] = useState(getCurrentMonthKey());
-  const [stats, setStats] = useState<MonthlyServiceStats | null>(null);
+  const [stats, setStats] = useState<TotalStats | null>(null);
   const [loading, setLoading] = useState(true);
 
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
   useEffect(() => {
     async function fetchStats() {
-      if (!db || !isMemberOrOwner) {
+      if (!isMemberOrOwner) {
         setLoading(false);
         return;
       }
 
       setLoading(true);
       try {
-        const statsRef = doc(db, 'monthly_service_stats', monthKey);
-        const snapshot = await getDoc(statsRef);
-
-        if (snapshot.exists()) {
-          const data = snapshot.data();
-          setStats({
-            month: data.month,
-            generatedAt: data.generatedAt?.toDate() || new Date(),
-            totals: data.totals || { totalReviews: 0, activeUsers: 0, totalPlaces: 0 },
-            distributions: data.distributions || { tierCounts: {}, categoryCounts: {} },
-            topReviewedPlaces: data.topReviewedPlaces || [],
-          });
+        const response = await fetch('/api/stats/total');
+        if (response.ok) {
+          const data = await response.json();
+          setStats(data);
         } else {
           setStats(null);
         }
@@ -70,22 +71,10 @@ export default function StatsPage() {
       }
     }
 
-    fetchStats();
-  }, [monthKey, isMemberOrOwner]);
-
-  const goToPreviousMonth = () => {
-    setMonthKey(getPreviousMonthKey(monthKey));
-  };
-
-  const goToNextMonth = () => {
-    const next = getNextMonthKey(monthKey);
-    const current = getCurrentMonthKey();
-    if (next <= current) {
-      setMonthKey(next);
+    if (!authLoading) {
+      fetchStats();
     }
-  };
-
-  const isCurrentMonth = monthKey === getCurrentMonthKey();
+  }, [isMemberOrOwner, authLoading]);
 
   // 등급 분포 최댓값 계산 (바 차트용)
   const tierCounts = stats?.distributions.tierCounts || { S: 0, A: 0, B: 0, C: 0, F: 0 };
@@ -134,36 +123,12 @@ export default function StatsPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </Link>
-          <h1 className="text-lg font-bold text-gray-900">서비스 통계</h1>
+          <h1 className="text-lg font-bold text-gray-900">전체 통계</h1>
         </div>
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-6">
-        {/* 월 선택 */}
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={goToPreviousMonth}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <span className="text-lg font-semibold text-gray-900 min-w-[120px] text-center">
-            {formatMonthKey(monthKey)}
-          </span>
-          <button
-            onClick={goToNextMonth}
-            disabled={isCurrentMonth}
-            className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-
-        {loading ? (
+        {loading || authLoading ? (
           <div className="text-center py-12 text-gray-500">
             <p>로딩 중...</p>
           </div>
@@ -174,17 +139,17 @@ export default function StatsPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
             </div>
-            <p className="text-gray-600">아직 이 달의 통계가 없습니다.</p>
-            <p className="text-sm text-gray-400 mt-1">데이터가 수집되면 자동으로 표시됩니다.</p>
+            <p className="text-gray-600">통계를 불러오지 못했습니다.</p>
+            <p className="text-sm text-gray-400 mt-1">잠시 후 다시 시도해주세요.</p>
           </div>
         ) : (
           <>
             {/* Hero Stats */}
             <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white">
-              <p className="text-blue-100 text-sm mb-2">{formatMonthKey(monthKey)}</p>
+              <p className="text-blue-100 text-sm mb-2">Dong-go 전체 통계</p>
               <p className="text-2xl font-bold">
-                {stats.totals.activeUsers}명이{' '}
-                <span className="text-blue-200">{stats.totals.totalReviews}개</span>의 리뷰를 남겼어요
+                {stats.totals.totalUsers}명이{' '}
+                <span className="text-blue-200">{stats.totals.totalReviews.toLocaleString()}개</span>의 리뷰를 남겼어요
               </p>
               <p className="text-blue-200 text-sm mt-2">
                 등록된 장소: {stats.totals.totalPlaces.toLocaleString()}곳
@@ -212,8 +177,8 @@ export default function StatsPage() {
                           />
                         </div>
                       </div>
-                      <div className="w-16 text-right">
-                        <span className="text-sm font-medium text-gray-900">{count}</span>
+                      <div className="w-20 text-right">
+                        <span className="text-sm font-medium text-gray-900">{count.toLocaleString()}</span>
                         <span className="text-xs text-gray-500 ml-1">개</span>
                       </div>
                     </div>
@@ -250,8 +215,8 @@ export default function StatsPage() {
                             />
                           </div>
                         </div>
-                        <div className="w-12 text-right">
-                          <span className="text-sm font-medium text-gray-900">{count}</span>
+                        <div className="w-16 text-right">
+                          <span className="text-sm font-medium text-gray-900">{count?.toLocaleString()}</span>
                         </div>
                       </div>
                     );
