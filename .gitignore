@@ -47,3 +47,4 @@ service-account-key.json
 
 initial_data
 initial_data/*
+.vscode/*
