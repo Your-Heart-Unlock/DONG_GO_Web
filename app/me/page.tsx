@@ -331,6 +331,56 @@ export default function ProfilePage() {
           </Link>
         </div>
 
+        {/* 바로가기 카드 */}
+        <div className="grid grid-cols-3 gap-3">
+          <Link
+            href="/me/badges"
+            className="bg-purple-50 rounded-xl border border-purple-200 p-4 hover:bg-purple-100 transition-colors"
+          >
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center">
+                <span className="text-lg">🏅</span>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-purple-900">내 뱃지</p>
+                <p className="text-xs text-purple-600">뱃지 보기</p>
+              </div>
+            </div>
+          </Link>
+          <Link
+            href="/leaderboard"
+            className="bg-yellow-50 rounded-xl border border-yellow-200 p-4 hover:bg-yellow-100 transition-colors"
+          >
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-10 h-10 bg-yellow-200 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-yellow-700" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-yellow-900">명예의 전당</p>
+                <p className="text-xs text-yellow-600">리더보드</p>
+              </div>
+            </div>
+          </Link>
+          <Link
+            href="/stats"
+            className="bg-blue-50 rounded-xl border border-blue-200 p-4 hover:bg-blue-100 transition-colors"
+          >
+            <div className="flex flex-col items-center gap-2 text-center">
+              <div className="w-10 h-10 bg-blue-200 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-blue-900">서비스 통계</p>
+                <p className="text-xs text-blue-600">전체 통계</p>
+              </div>
+            </div>
+          </Link>
+        </div>
+
         {/* 등급 분포 */}
         {totalTierReviews > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5">

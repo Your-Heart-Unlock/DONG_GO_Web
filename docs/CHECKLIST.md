@@ -2,7 +2,7 @@
 
 ## 🎯 현재 작업 우선순위 (주차별 계획)
 
-**업데이트: 2026-01-29**
+**업데이트: 2026-02-03**
 
 ### P0 - MVP 완성 (즉시, 1일)
 > **목표**: 보안 확정 + 기본 버그 수정
@@ -23,32 +23,31 @@
 
 ---
 
-### P1 - 기본 UX 개선 (1주차, 5.5일)
+### P1 - 기본 UX 개선 (1주차) ✅ 완료
 > **목표**: 비용 절감 + 사용성 개선
 
-3. [x] **지도 성능 최적화** (E섹션) - 2d ⭐ 최우선
+3. [x] **지도 성능 최적화** (E섹션) ⭐
    - 줌 게이트 + bounds 기반 로딩 (cellId 그리드, 읽기 비용 절감)
    - 줌 레벨 11 이상에서만 마커 표시
    - cellId 인덱스 활용 (places 컬렉션에 cellId 필드 추가)
-   - 마이그레이션 API: `/api/admin/migrate-cellid`
+   - 마커 클러스터링 (줌 14 이하)
 
-4. [x] **스마트 필터** (N섹션) - 2d
+4. [x] **스마트 필터** (N섹션)
    - 카테고리/등급/지역 필터링
    - 미방문/위시리스트 필터
    - 지도 마커 연동
 
-5. [x] **좌표 기반 중복 체크** (G섹션) - 1d
+5. [x] **좌표 기반 중복 체크** (G섹션)
    - geohash 필드 추가 (Import 시 자동 생성)
    - 100m 이내 중복 장소 감지
 
-6. [x] **카테고리 아이콘 마커** (W섹션) - 1d
+6. [x] **카테고리 아이콘 마커** (W섹션) ✅ 완료
    - CategoryKey / IconGrade 타입 정의
    - Place.categoryKey 필드 추가 + 기존 category → categoryKey 매핑
    - 지도 마커를 카테고리별 SVG 아이콘으로 교체 (72개 SVG 활용)
-   - 필터 UI에 카테고리 아이콘 적용
    - REF: `REF_CATEGORIES_ICONS.md`
 
-7. [x] **사진 업로드 시스템** (H섹션) - 0.5d ✅ 완료
+7. [x] **사진 업로드 시스템** (H섹션) ✅ 완료
    - [x] Firebase Storage 연동 (storage.rules 배포 완료)
    - [x] Firestore photos 컬렉션 규칙 추가 (firestore.rules)
    - [x] API Routes: POST/GET/DELETE `/api/photos`
@@ -61,17 +60,16 @@
 
 ---
 
-### P2 - 핵심 신기능 (2주차, 3.5일)
+### P2 - 핵심 신기능 (2주차) ✅ 완료
 > **목표**: 위시리스트 + 통계로 몰입도 증가
 
-7. [x] **위시리스트** (O섹션) - 1.5d ✅ 핵심 완료
+7. [x] **위시리스트** (O섹션) ✅ 핵심 완료
    - "가고 싶어요" 버튼, 위시리스트 페이지, API, wishCount 추적 완료
    - 부가 기능(프로필 탭, TOP 5 위젯, 그룹 위시) 미구현
 
-8. [x] **개인 통계 대시보드** (P섹션) - 2d ✅ 핵심 완료
-   - `/me` 프로필 페이지 (유저 정보 + 통계 + 위시리스트 링크)
-   - 등급 분포 / 카테고리별 분석 / 자주 쓰는 태그 / 재방문 의향 / 최근 리뷰
-   - 미구현: 월별 시간 분석, 그룹 내 랭킹, 취향 프로필 텍스트
+8. [x] **개인 통계 대시보드** (P섹션) ✅ 완료
+   - `/me` 프로필 페이지에 통계 통합 (별도 /me/stats 없이 한 페이지)
+   - 리뷰/등급 분포 차트, 카테고리별 분석, 태그 분석, 재방문 의도 통계
 
 **완료 시**: 가고 싶은 곳 관리 + 내 취향 분석 → 계속 쓰고 싶은 서비스 💚
 
@@ -114,12 +112,14 @@
 ### P5 - 운영 기능 (나중에, 3.5일)
 > **목표**: 관리자 편의 기능
 
-13. [x] **요청 시스템** (I섹션) - 1.5d ✅ 삭제 요청 완료
-    - member의 삭제 요청 생성 + owner 승인/거절 완료
-    - 수정 요청은 미구현
+13. [x] **요청 시스템** (I섹션) - 1.5d ✅ 완료
+    - member의 삭제 요청 + 수정 요청(카테고리 변경) 생성
+    - owner 승인/거절 완료
 
-14. [~] **Admin 장소 관리** (J섹션) - 1d
-    - `/admin/places`: 삭제 요청 관리 (승인/거부) 완료
+14. [x] **Admin 장소/카테고리 관리** (J섹션) - 1d ✅ 완료
+    - `/admin/requests`: 수정/삭제 요청 관리 (승인/거부)
+    - `/admin/categories`: LLM 카테고리 분류 도구 (DB 불러오기 → LLM 프롬프트 복사 → 응답 적용)
+    - `/admin/categories`: 데이터 정리 도구 (CAFE/BAR 자동 분류, categoryCode 정리)
     - `/admin/settings`: rating label 편집 - 미구현
 
 15. [ ] **알림 시스템** (U섹션) - 1d
@@ -145,16 +145,13 @@
 ## 📅 추천 진행 순서
 
 **Week 0 (완료)**: P0 완료 → MVP 배포
-**Week 1 (진행중)**: P1 완료 → 지도 최적화 + 카테고리 아이콘 + 필터
-**Week 2**: P2 완료 → 위시리스트 + 통계
-**Week 3**: P3 완료 → 리더보드 + 뱃지로 재미
-**Week 4**: P4 완료 → 품질 체크
+**Week 1 (완료)**: P1 완료 → 지도 최적화 + 카테고리 아이콘 + 필터 + 클러스터링
+**Week 2 (완료)**: P2 완료 → 위시리스트 + 통계
+**Week 2+ (완료)**: P5 일부 → 요청 시스템 + Admin 카테고리 도구 + 품질 수정
+**Week 3**: P3 → 리더보드 + 뱃지로 재미
+**Week 4**: P4 → 품질 체크
 
-→ **1개월 후**: 완성도 높은 v1.0 완성! 🎊
-
-**그 이후**: P5, P6는 사용자 피드백 보고 결정
-
-**⚠️ 중요**: P1의 지도 최적화를 먼저 해야 Firestore 읽기 비용 폭탄을 피할 수 있습니다!
+→ **다음 단계**: P3(리더보드/뱃지) 또는 P4(품질) 중 선택
 
 목표: “작동하는 서비스”를 가장 빠르게 만들고, 이후 확장 가능하게 유지.
 
@@ -208,6 +205,7 @@
 - [x] **줌 게이트 + bounds 기반 로딩** (줌 레벨 11 이상에서만 마커 표시, cellId 기반 쿼리)
 - [x] **places에 cellId 필드 추가** (0.01도 그리드, bounds 기반 Firestore 'in' 쿼리)
 - [x] **검색/필터 기능** (카테고리, 등급, 지역별 필터링)
+- [x] **마커 클러스터링** (줌 14 이하에서 그리드 기반 클러스터, 클릭 시 줌인)
 
 ---
 
@@ -246,30 +244,37 @@
 
 ---
 
-## I. 요청 시스템(수정/삭제 요청) (1.5d) → 상세: `IMPL-I_REQUEST_SYSTEM.md` - **삭제 요청 완료**
-- [ ] member가 place 수정 요청 생성(`/requests`)
+## I. 요청 시스템(수정/삭제 요청) (1.5d) → 상세: `IMPL-I_REQUEST_SYSTEM.md` - **완료**
+- [x] member가 place 수정 요청 생성 (카테고리 변경, select 드롭다운으로 선택)
 - [x] member가 place 삭제 요청 생성 (장소 상세 페이지에서 요청)
-- [x] 요청 상태(open/approved/rejected) 조회 UI (admin/places 페이지)
+- [x] 요청 상태(open/approved/rejected) 조회 UI (admin/requests 페이지)
 
 ---
 
 ## J. Admin Console (owner only) (3~4d) → 상세: `IMPL-J_ADMIN_CONSOLE.md`
 - [x] `/admin` dashboard (기본 구조)
 - [x] `/admin/users`: pending → member 승인 (완전 구현)
-- [x] `/admin/places`: 삭제 요청 관리 (요청 목록 + 승인/거부 UI)
+- [x] `/admin/requests`: 수정/삭제 요청 관리 (요청 목록 + 승인/거부 UI)
 - [x] `/admin/import`: JSON import(dry-run → commit)
   - [x] 네이버 북마크 JSON 파싱
   - [x] Preview 화면 (OK/DUPLICATE/INVALID 분류)
   - [x] Commit API Route (batch 처리)
   - [x] admin_logs 기록
-- [x] `/admin/places`: 삭제 요청 리스트 + 승인/거부 (구현 완료)
+- [x] `/admin/categories`: LLM 카테고리 분류 도구
+  - [x] DB에서 미분류 장소 불러오기 (페이지네이션)
+  - [x] LLM 프롬프트 자동 생성 + 클립보드 복사
+  - [x] LLM JSON 응답 붙여넣기 → 일괄 카테고리 적용
+  - [x] 개별 카테고리 드롭다운 수정
+  - [x] CAFE/BAR 자동 분류 도구
+  - [x] categoryCode 정리 도구
 - [ ] `/admin/settings`: rating label mapping 편집 - **페이지 없음**
 
 ---
 
 ## K. 마감 품질(1d) → 상세: `IMPL-K_QUALITY_CHECK.md`
 - [ ] 에러/로딩 상태 정리
-- [ ] 모바일 레이아웃 점검
+- [x] 모바일 레이아웃 점검 (상세 페이지 뒤로가기 버튼 여백 수정)
+- [x] 다크모드 입력 필드 텍스트 가시성 수정 (globals.css)
 - [ ] 라이트 모드(pending/guest) UX 문구 정리
 - [ ] 기본 접근성(a11y) 점검(버튼 라벨, focus)
 - [ ] 테스트 계정 시나리오:
@@ -336,28 +341,22 @@
 ---
 
 ## P. 개인 통계 대시보드 (2d) - **핵심 완료**
-- [x] `/me` 프로필 페이지 생성 (통계 통합)
-- [x] UserStats 인터페이스 정의
-  - [x] 기본 통계 (총 리뷰, 방문 장소, 평균 등급)
-  - [x] 등급 분포 (S/A/B/C/F 개수)
-  - [x] 카테고리 분석 (카테고리별 리뷰 수 + 평균 등급)
-  - [ ] 시간 분석 (월별 리뷰 수, 최다 활동 월) - 미구현
+- [x] `/me` 페이지에 통계 통합 (별도 /me/stats 없이)
+- [x] UserStats 데이터
+  - [x] 기본 통계 (총 리뷰, 방문 장소, 위시리스트)
+  - [x] 등급 분포 (S/A/B/C/F 컬러 바 차트)
+  - [x] 카테고리 분석 (카테고리별 그리드)
   - [x] 재방문 분석 (재방문 의도 비율)
+  - [x] 태그 분석 (자주 사용한 태그)
+  - [ ] 시간 분석 (월별 리뷰 수) - 미구현
   - [ ] 그룹 내 랭킹 - 미구현
-- [x] 통계 계산 API
-  - [x] `GET /api/me/stats` - Firestore에서 집계 (리뷰/위시/장소/태그/카테고리)
-  - [x] `GET /api/me/reviews?offset=N&limit=5` - 리뷰 페이지네이션
-  - [ ] users 문서에 stats 필드 추가 (선택) - 미구현
-- [x] 시각화 (CSS 기반, 외부 라이브러리 미사용)
-  - [x] 요약 카드 (리뷰 개수, 방문 장소, 위시리스트 링크)
-  - [x] 등급 분포 (수평 바 차트 + 퍼센트)
-  - [x] 카테고리별 분석 (2열 그리드 + 평균 등급)
-  - [x] 자주 쓰는 태그 (chip 목록)
-  - [x] 재방문 의향 바
-  - [x] 최근 리뷰 (5개 + "더보기" 페이지네이션)
+- [x] 통계 계산 API (`/api/me/stats`)
+- [x] 시각화 (Tailwind CSS 기반)
+  - [x] 요약 카드 (리뷰 개수, 방문 장소 등)
+  - [x] 바 차트 - 등급 분포
+  - [x] 카테고리별 분석 그리드
   - [ ] 라인 차트 - 월별 활동 - 미구현
-  - [ ] 취향 프로필 텍스트 ("까다로운 미식가") - 미구현
-- [x] 메인 페이지 헤더에 프로필 아이콘 링크 (`/me`)
+  - [ ] 취향 프로필 텍스트 - 미구현
 
 **상세**: `IMPL-P_USER_STATS.md`
 
@@ -491,18 +490,18 @@
 
 ---
 
-## W. 카테고리 아이콘 마커 시스템 (1d) → 상세: `REF_CATEGORIES_ICONS.md`
-- [ ] CategoryKey / IconGrade 타입 정의 (`types/index.ts`)
-  - [ ] `CategoryKey`: Korea | China | Japan | West | Asian | Snack | Meat | Sea | Cafe | Beer | Other | Idle
-  - [ ] `IconGrade`: S | A | B | C | F | N
-- [ ] `getCategoryIconPath()` 유틸 함수 (`lib/utils/categoryIcon.ts`)
-  - [ ] 파일명 매핑: Other → Others, Idle → Blank (실제 SVG 파일명 차이 처리)
-  - [ ] fallback: `Idle_N.svg`
-- [ ] Place 타입에 `categoryKey` 필드 추가 (선택적, 없으면 category에서 추정)
-- [ ] 카테고리 라벨 매핑 (CategoryKey → 한글)
-- [ ] NaverMapView 마커를 카테고리별 SVG 아이콘으로 교체
-  - [ ] `place.categoryKey` + `place.avgTier` → 적절한 SVG 선택
-  - [ ] avgTier 없으면 N grade 사용
+## W. 카테고리 아이콘 마커 시스템 (1d) → 상세: `REF_CATEGORIES_ICONS.md` - **완료**
+- [x] CategoryKey / IconGrade 타입 정의 (`types/index.ts`)
+  - [x] `CategoryKey`: Korea | China | Japan | West | Asian | Snack | Meat | Sea | Cafe | Beer | Other | Idle
+  - [x] `IconGrade`: S | A | B | C | F | N
+- [x] `getCategoryIconPath()` 유틸 함수 (`lib/utils/categoryIcon.ts`)
+  - [x] 파일명 매핑: Other → Others, Idle → Blank (실제 SVG 파일명 차이 처리)
+  - [x] fallback: `Idle_N.svg`
+- [x] Place 타입에 `categoryKey` 필드 추가 (선택적, 없으면 category에서 추정)
+- [x] 카테고리 라벨 매핑 (CategoryKey → 한글)
+- [x] NaverMapView 마커를 카테고리별 SVG 아이콘으로 교체
+  - [x] `place.categoryKey` + `place.avgTier` → 적절한 SVG 선택
+  - [x] avgTier 없으면 N grade 사용
 - [ ] 필터 UI에 카테고리 아이콘 적용 (선택)
 - [ ] 바텀시트/장소 상세에 카테고리 아이콘 표시 (선택)
 

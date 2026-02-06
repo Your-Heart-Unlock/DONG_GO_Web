@@ -409,7 +409,7 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
         {isMemberOrOwner ? (
           <>
             {/* 리뷰 섹션 */}
-            <ReviewList placeId={placeId} />
+            <ReviewList placeId={placeId} categoryKey={place.categoryKey} />
 
             {/* 사진 갤러리 섹션 */}
             <PhotoGallery placeId={placeId} />

@@ -17,6 +17,7 @@ export interface SearchResultItem {
 interface SearchBarProps {
   placeholder?: string;
   onFilterChange?: (filterState: FilterState) => void;
+  onFilterPanelOpenChange?: (isOpen: boolean) => void;
   // 검색 드롭다운
   searchResults?: SearchResultItem[];
   searchLoading?: boolean;
@@ -29,6 +30,7 @@ interface SearchBarProps {
 export default function SearchBar({
   placeholder = '장소 검색...',
   onFilterChange,
+  onFilterPanelOpenChange,
   searchResults,
   searchLoading,
   searchTotal,
@@ -84,10 +86,11 @@ export default function SearchBar({
     }
   }, [searchResults, searchLoading, query]);
 
-  // 필터 패널 열릴 때 드롭다운 닫기
+  // 필터 패널 열릴 때 드롭다운 닫기 + 부모에게 알림
   useEffect(() => {
     if (showFilters) setShowDropdown(false);
-  }, [showFilters]);
+    onFilterPanelOpenChange?.(showFilters);
+  }, [showFilters, onFilterPanelOpenChange]);
 
   // 외부 클릭 시 드롭다운 닫기
   useEffect(() => {

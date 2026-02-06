@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Review } from '@/types';
+import { Review, CategoryKey } from '@/types';
 import { getReviewsByPlaceId } from '@/lib/firebase/reviews';
 import { useAuth } from '@/contexts/AuthContext';
 import ReviewCard from './ReviewCard';
@@ -9,9 +9,10 @@ import ReviewForm from './ReviewForm';
 
 interface ReviewListProps {
   placeId: string;
+  categoryKey?: CategoryKey; // 장소의 카테고리 (리더보드용)
 }
 
-export default function ReviewList({ placeId }: ReviewListProps) {
+export default function ReviewList({ placeId, categoryKey }: ReviewListProps) {
   const { user } = useAuth();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,6 +101,7 @@ export default function ReviewList({ placeId }: ReviewListProps) {
             setEditingReview(undefined);
           }}
           onSaved={handleSaved}
+          categoryKey={categoryKey}
         />
       )}
     </div>

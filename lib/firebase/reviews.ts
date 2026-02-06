@@ -11,9 +11,12 @@ import {
   where,
   serverTimestamp,
   setDoc,
+  increment,
 } from 'firebase/firestore';
 import { db } from './client';
-import { Review, PlaceStats, RatingTier } from '@/types';
+import { Review, PlaceStats, RatingTier, CategoryKey } from '@/types';
+import { getCurrentMonthKey } from '@/lib/utils/monthKey';
+import { calculateRecordPoints } from '@/lib/utils/recordPoints';
 
 /**
  * placeId 기준 리뷰 목록 (createdAt desc)
@@ -127,7 +130,55 @@ async function recalculateStats(placeId: string): Promise<void> {
 }
 
 /**
- * 리뷰 생성 + stats 업데이트
+ * monthly_user_stats 업데이트 (리뷰 생성/삭제 시)
+ */
+async function updateMonthlyUserStats(
+  uid: string,
+  tier: RatingTier,
+  categoryKey: CategoryKey | undefined,
+  recordPoints: number,
+  delta: 1 | -1
+): Promise<void> {
+  if (!db) return;
+
+  const monthKey = getCurrentMonthKey();
+  const statsRef = doc(db, 'monthly_user_stats', monthKey, 'users', uid);
+
+  try {
+    const statsSnap = await getDoc(statsRef);
+
+    if (statsSnap.exists()) {
+      // 기존 문서 업데이트
+      const updateData: Record<string, unknown> = {
+        reviews: increment(delta),
+        recordPoints: increment(recordPoints * delta),
+        [`tierCounts.${tier}`]: increment(delta),
+        lastActiveAt: serverTimestamp(),
+      };
+      if (categoryKey) {
+        updateData[`categoryReviews.${categoryKey}`] = increment(delta);
+      }
+      await updateDoc(statsRef, updateData);
+    } else if (delta === 1) {
+      // 신규 문서 생성 (생성 시에만)
+      const newStats = {
+        month: monthKey,
+        uid,
+        reviews: 1,
+        recordPoints,
+        tierCounts: { S: 0, A: 0, B: 0, C: 0, F: 0, [tier]: 1 },
+        categoryReviews: categoryKey ? { [categoryKey]: 1 } : {},
+        lastActiveAt: serverTimestamp(),
+      };
+      await setDoc(statsRef, newStats);
+    }
+  } catch (error) {
+    console.warn('Monthly user stats 업데이트 실패:', error);
+  }
+}
+
+/**
+ * 리뷰 생성 + stats 업데이트 + monthly_user_stats 업데이트
  */
 export async function createReview(review: {
   placeId: string;
@@ -138,6 +189,7 @@ export async function createReview(review: {
   visitedAt?: Date;
   companions?: string;
   revisitIntent?: boolean;
+  categoryKey?: CategoryKey; // 장소의 카테고리 (리더보드용)
 }): Promise<void> {
   if (!db) {
     throw new Error('Firestore is not initialized');
@@ -156,8 +208,12 @@ export async function createReview(review: {
   if (review.visitedAt) docData.visitedAt = review.visitedAt;
   if (review.companions) docData.companions = review.companions;
   if (review.revisitIntent !== undefined) docData.revisitIntent = review.revisitIntent;
+  if (review.categoryKey) docData.categoryKey = review.categoryKey;
 
   await addDoc(reviewsRef, docData);
+
+  // 기록왕 포인트 계산
+  const recordPoints = calculateRecordPoints(review);
 
   // stats 업데이트는 실패해도 리뷰 저장에 영향을 주지 않음
   try {
@@ -165,10 +221,30 @@ export async function createReview(review: {
   } catch (error) {
     console.warn('Stats 업데이트 실패 (리뷰는 저장됨):', error);
   }
+
+  // monthly_user_stats 업데이트
+  try {
+    await updateMonthlyUserStats(
+      review.uid,
+      review.ratingTier,
+      review.categoryKey,
+      recordPoints,
+      1
+    );
+  } catch (error) {
+    console.warn('Monthly user stats 업데이트 실패 (리뷰는 저장됨):', error);
+  }
+
+  // 뱃지 체크 (비동기로 실행, 실패해도 무시)
+  import('@/lib/firebase/badges').then(({ checkAndAwardBadges }) => {
+    checkAndAwardBadges(review.uid).catch((error) => {
+      console.warn('뱃지 체크 실패 (리뷰는 저장됨):', error);
+    });
+  });
 }
 
 /**
- * 리뷰 수정 + stats 재계산
+ * 리뷰 수정 + stats 재계산 + monthly_user_stats delta 업데이트
  */
 export async function updateReview(
   reviewId: string,
@@ -191,11 +267,39 @@ export async function updateReview(
     throw new Error('Review not found');
   }
 
-  const placeId = reviewSnap.data().placeId;
+  const oldData = reviewSnap.data();
+  const placeId = oldData.placeId;
+  const uid = oldData.uid;
+  const oldTier = oldData.ratingTier as RatingTier;
+  const categoryKey = oldData.categoryKey as CategoryKey | undefined;
 
-  await updateDoc(reviewRef, {
-    ...updates,
+  // 기존 포인트 계산
+  const oldPoints = calculateRecordPoints({
+    visitedAt: oldData.visitedAt?.toDate?.(),
+    oneLineReview: oldData.oneLineReview,
+    revisitIntent: oldData.revisitIntent,
+    companions: oldData.companions,
+  });
+
+  // undefined 값 필터링 (Firestore는 undefined를 허용하지 않음)
+  const filteredUpdates: Record<string, unknown> = {
     updatedAt: serverTimestamp(),
+  };
+  if (updates.ratingTier !== undefined) filteredUpdates.ratingTier = updates.ratingTier;
+  if (updates.oneLineReview !== undefined) filteredUpdates.oneLineReview = updates.oneLineReview;
+  if (updates.tags !== undefined) filteredUpdates.tags = updates.tags;
+  if (updates.visitedAt !== undefined) filteredUpdates.visitedAt = updates.visitedAt;
+  if (updates.companions !== undefined) filteredUpdates.companions = updates.companions;
+  if (updates.revisitIntent !== undefined) filteredUpdates.revisitIntent = updates.revisitIntent;
+
+  await updateDoc(reviewRef, filteredUpdates);
+
+  // 새 포인트 계산
+  const newPoints = calculateRecordPoints({
+    visitedAt: updates.visitedAt ?? oldData.visitedAt?.toDate?.(),
+    oneLineReview: updates.oneLineReview ?? oldData.oneLineReview,
+    revisitIntent: updates.revisitIntent ?? oldData.revisitIntent,
+    companions: updates.companions ?? oldData.companions,
   });
 
   try {
@@ -203,11 +307,40 @@ export async function updateReview(
   } catch (error) {
     console.warn('Stats 업데이트 실패 (리뷰는 수정됨):', error);
   }
+
+  // monthly_user_stats delta 업데이트
+  const newTier = updates.ratingTier ?? oldTier;
+  const pointsDelta = newPoints - oldPoints;
+
+  if (oldTier !== newTier || pointsDelta !== 0) {
+    try {
+      const monthKey = getCurrentMonthKey();
+      const statsRef = doc(db, 'monthly_user_stats', monthKey, 'users', uid);
+      const statsSnap = await getDoc(statsRef);
+
+      if (statsSnap.exists()) {
+        const updateData: Record<string, unknown> = {
+          lastActiveAt: serverTimestamp(),
+        };
+        if (pointsDelta !== 0) {
+          updateData.recordPoints = increment(pointsDelta);
+        }
+        if (oldTier !== newTier) {
+          updateData[`tierCounts.${oldTier}`] = increment(-1);
+          updateData[`tierCounts.${newTier}`] = increment(1);
+        }
+        await updateDoc(statsRef, updateData);
+      }
+    } catch (error) {
+      console.warn('Monthly user stats delta 업데이트 실패:', error);
+    }
+  }
+
   return placeId;
 }
 
 /**
- * 리뷰 삭제 + stats 업데이트
+ * 리뷰 삭제 + stats 업데이트 + monthly_user_stats decrement
  */
 export async function deleteReview(reviewId: string, placeId: string): Promise<void> {
   if (!db) {
@@ -215,12 +348,39 @@ export async function deleteReview(reviewId: string, placeId: string): Promise<v
   }
 
   const reviewRef = doc(db, 'reviews', reviewId);
+
+  // 삭제 전 데이터 읽기
+  const reviewSnap = await getDoc(reviewRef);
+  if (!reviewSnap.exists()) {
+    throw new Error('Review not found');
+  }
+
+  const data = reviewSnap.data();
+  const uid = data.uid;
+  const tier = data.ratingTier as RatingTier;
+  const categoryKey = data.categoryKey as CategoryKey | undefined;
+
+  // 기록왕 포인트 계산
+  const recordPoints = calculateRecordPoints({
+    visitedAt: data.visitedAt?.toDate?.(),
+    oneLineReview: data.oneLineReview,
+    revisitIntent: data.revisitIntent,
+    companions: data.companions,
+  });
+
   await deleteDoc(reviewRef);
 
   try {
     await recalculateStats(placeId);
   } catch (error) {
     console.warn('Stats 업데이트 실패 (리뷰는 삭제됨):', error);
+  }
+
+  // monthly_user_stats decrement
+  try {
+    await updateMonthlyUserStats(uid, tier, categoryKey, recordPoints, -1);
+  } catch (error) {
+    console.warn('Monthly user stats decrement 실패 (리뷰는 삭제됨):', error);
   }
 }
 

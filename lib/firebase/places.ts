@@ -128,6 +128,15 @@ export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt'>)
     categoryKey: place.categoryKey || inferCategoryKey(place.category),
     createdAt: serverTimestamp(),
   });
+
+  // 뱃지 체크 (비동기로 실행, 실패해도 무시)
+  if (place.createdBy) {
+    import('@/lib/firebase/badges').then(({ checkAndAwardBadges }) => {
+      checkAndAwardBadges(place.createdBy).catch((error) => {
+        console.warn('뱃지 체크 실패 (장소는 저장됨):', error);
+      });
+    });
+  }
 }
 
 /**

@@ -1,37 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+interface PlaceResult {
+  placeId: string;
+  name: string;
+  address: string;
+  category: string;
+  lat: number;
+  lng: number;
+  telephone?: string;
+  link?: string;
+  source?: 'kakao' | 'naver';
+}
+
 /**
- * 카카오 장소 검색 API
- * GET /api/search/places?query=검색어&page=1
- *
- * 카카오 REST API (developers.kakao.com) 사용
- * 필요한 환경변수:
- * - KAKAO_REST_API_KEY
+ * 카카오 장소 검색 (내부 함수)
  */
-export async function GET(request: NextRequest) {
+async function searchKakao(query: string, page: number, size: number): Promise<{
+  places: PlaceResult[];
+  total: number;
+  isEnd: boolean;
+} | null> {
+  const apiKey = process.env.KAKAO_REST_API_KEY;
+  if (!apiKey) {
+    console.warn('[searchKakao] KAKAO_REST_API_KEY 미설정');
+    return null;
+  }
+
   try {
-    const searchParams = request.nextUrl.searchParams;
-    const query = searchParams.get('query');
-    const page = parseInt(searchParams.get('page') || '1');
-    const size = 10; // 한 페이지당 결과 수 (카카오 최대 15)
-
-    if (!query || query.trim().length < 2) {
-      return NextResponse.json(
-        { error: '검색어는 2글자 이상 입력해주세요.' },
-        { status: 400 }
-      );
-    }
-
-    const apiKey = process.env.KAKAO_REST_API_KEY;
-
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: '카카오 검색 API가 설정되지 않았습니다.' },
-        { status: 500 }
-      );
-    }
-
-    // 카카오 키워드 장소 검색 API 호출
     const response = await fetch(
       `https://dapi.kakao.com/v2/local/search/keyword.json?query=${encodeURIComponent(query)}&page=${page}&size=${size}`,
       {
@@ -42,17 +37,13 @@ export async function GET(request: NextRequest) {
     );
 
     if (!response.ok) {
-      console.error('Kakao API error:', response.status, await response.text());
-      return NextResponse.json(
-        { error: '검색에 실패했습니다.' },
-        { status: 500 }
-      );
+      console.error('[searchKakao] API error:', response.status, await response.text());
+      return null;
     }
 
     const data = await response.json();
 
-    // 응답 데이터 변환
-    const places = data.documents.map((doc: {
+    const places: PlaceResult[] = data.documents.map((doc: {
       id: string;
       place_name: string;
       category_name: string;
@@ -71,18 +62,158 @@ export async function GET(request: NextRequest) {
       lng: parseFloat(doc.x),
       telephone: doc.phone || undefined,
       link: doc.place_url,
+      source: 'kakao' as const,
     }));
 
-    const meta = data.meta;
+    return {
+      places,
+      total: data.meta.pageable_count,
+      isEnd: data.meta.is_end,
+    };
+  } catch (error) {
+    console.error('[searchKakao] Exception:', error);
+    return null;
+  }
+}
+
+/**
+ * 네이버 장소 검색 (폴백용)
+ */
+async function searchNaver(query: string, page: number, size: number): Promise<{
+  places: PlaceResult[];
+  total: number;
+  isEnd: boolean;
+} | null> {
+  const clientId = process.env.NAVER_SEARCH_CLIENT_ID;
+  const clientSecret = process.env.NAVER_SEARCH_CLIENT_SECRET;
+
+  if (!clientId || !clientSecret) {
+    console.warn('[searchNaver] NAVER_SEARCH_CLIENT_ID 또는 NAVER_SEARCH_CLIENT_SECRET 미설정');
+    return null;
+  }
+
+  try {
+    const start = (page - 1) * size + 1;
+    const response = await fetch(
+      `https://openapi.naver.com/v1/search/local.json?query=${encodeURIComponent(query)}&display=${size}&start=${start}&sort=comment`,
+      {
+        headers: {
+          'X-Naver-Client-Id': clientId,
+          'X-Naver-Client-Secret': clientSecret,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error('[searchNaver] API error:', response.status);
+      return null;
+    }
+
+    const data = await response.json();
+
+    const places: PlaceResult[] = data.items.map((item: {
+      title: string;
+      link: string;
+      category: string;
+      description: string;
+      telephone: string;
+      address: string;
+      roadAddress: string;
+      mapx: string;
+      mapy: string;
+    }) => {
+      // 링크에서 placeId 추출
+      let placeId = '';
+      if (item.link) {
+        const linkMatch = item.link.match(/place\/(\d+)/) || item.link.match(/entry\/place\/(\d+)/);
+        if (linkMatch) {
+          placeId = `naver_${linkMatch[1]}`;
+        } else {
+          // placeId 추출 실패 시 임시 ID 생성
+          placeId = `naver_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        }
+      }
+
+      // 네이버 카텍 좌표 → WGS84 근사 변환
+      const lng = parseInt(item.mapx) / 10000000;
+      const lat = parseInt(item.mapy) / 10000000;
+
+      return {
+        placeId,
+        name: item.title.replace(/<[^>]*>/g, ''), // HTML 태그 제거
+        address: item.roadAddress || item.address,
+        category: item.category.split('>').pop()?.trim() || item.category,
+        lat,
+        lng,
+        telephone: item.telephone || undefined,
+        link: item.link,
+        source: 'naver' as const,
+      };
+    });
+
+    return {
+      places,
+      total: data.total,
+      isEnd: start + data.items.length >= data.total,
+    };
+  } catch (error) {
+    console.error('[searchNaver] Exception:', error);
+    return null;
+  }
+}
+
+/**
+ * 장소 검색 API (카카오 우선, 실패 시 네이버 폴백)
+ * GET /api/search/places?query=검색어&page=1
+ *
+ * 필요한 환경변수:
+ * - KAKAO_REST_API_KEY (카카오)
+ * - NAVER_SEARCH_CLIENT_ID, NAVER_SEARCH_CLIENT_SECRET (네이버 폴백)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const query = searchParams.get('query');
+    const page = parseInt(searchParams.get('page') || '1');
+    const size = 10;
+
+    if (!query || query.trim().length < 2) {
+      return NextResponse.json(
+        { error: '검색어는 2글자 이상 입력해주세요.' },
+        { status: 400 }
+      );
+    }
+
+    // 1. 카카오 검색 시도
+    let result = await searchKakao(query, page, size);
+    let searchSource: 'kakao' | 'naver' = 'kakao';
+
+    // 2. 카카오 실패 또는 결과 없음 → 네이버 폴백
+    if (!result || result.places.length === 0) {
+      console.log(`[search/places] 카카오 검색 ${!result ? '실패' : '결과 없음'}, 네이버 폴백 시도`);
+      result = await searchNaver(query, page, size);
+      searchSource = 'naver';
+    }
+
+    // 3. 둘 다 실패
+    if (!result) {
+      return NextResponse.json(
+        { error: '검색에 실패했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 500 }
+      );
+    }
+
+    console.log(`[search/places] "${query}" 검색 완료 (${searchSource}): ${result.places.length}개`);
 
     return NextResponse.json({
-      places,
+      places: result.places,
       pagination: {
-        total: meta.pageable_count,
+        total: result.total,
         page,
-        totalPages: Math.ceil(meta.pageable_count / size),
-        hasMore: !meta.is_end,
+        totalPages: Math.ceil(result.total / size),
+        hasMore: !result.isEnd,
       },
+      source: searchSource,
     });
   } catch (error) {
     console.error('Search API error:', error);

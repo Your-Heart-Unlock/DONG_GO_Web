@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Review, RatingTier } from '@/types';
+import { Review, RatingTier, CategoryKey } from '@/types';
 import { createReview, updateReview } from '@/lib/firebase/reviews';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -18,9 +18,10 @@ interface ReviewFormProps {
   existingReview?: Review;
   onClose: () => void;
   onSaved: () => void;
+  categoryKey?: CategoryKey; // 장소의 카테고리 (리더보드용)
 }
 
-export default function ReviewForm({ placeId, existingReview, onClose, onSaved }: ReviewFormProps) {
+export default function ReviewForm({ placeId, existingReview, onClose, onSaved, categoryKey }: ReviewFormProps) {
   const { user } = useAuth();
   const [selectedTier, setSelectedTier] = useState<RatingTier | null>(existingReview?.ratingTier || null);
   const [oneLineReview, setOneLineReview] = useState(existingReview?.oneLineReview || '');
@@ -75,6 +76,7 @@ export default function ReviewForm({ placeId, existingReview, onClose, onSaved }
           visitedAt: parsedVisitedAt,
           companions: companions || undefined,
           revisitIntent,
+          categoryKey, // 장소의 카테고리 (리더보드용)
         });
       }
       onSaved();

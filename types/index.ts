@@ -217,3 +217,97 @@ export interface FilterState extends SearchQuery {
   isActive: boolean; // 필터가 적용 중인지
   activeCount: number; // 활성화된 필터 개수
 }
+
+// ===== QRS: Aggregate & Leaderboard Types =====
+
+/** Per-user monthly stats (stored at monthly_user_stats/{YYYY-MM}/users/{uid}) */
+export interface MonthlyUserStats {
+  month: string; // "YYYY-MM"
+  uid: string;
+  reviews: number;
+  recordPoints: number;
+  tierCounts: Record<RatingTier, number>;
+  categoryReviews: Partial<Record<CategoryKey, number>>;
+  lastActiveAt: Date;
+}
+
+/** Leaderboard entry for a single user in a ranking */
+export interface LeaderboardEntry {
+  uid: string;
+  nickname: string;
+  value: number;
+}
+
+/** Category winner entry */
+export interface CategoryWinner {
+  uid: string;
+  nickname: string;
+  reviews: number;
+}
+
+/** Monthly leaderboard snapshot (stored at monthly_leaderboard/{YYYY-MM}) */
+export interface MonthlyLeaderboard {
+  month: string;
+  generatedAt: Date;
+  reviewKingTop: LeaderboardEntry[];
+  recordKingTop: LeaderboardEntry[];
+  overallTop: LeaderboardEntry[];
+  categoryWinners: Partial<Record<CategoryKey, CategoryWinner>>;
+  hiddenCount: number;
+}
+
+/** Monthly service stats snapshot (stored at monthly_service_stats/{YYYY-MM}) */
+export interface MonthlyServiceStats {
+  month: string;
+  generatedAt: Date;
+  totals: {
+    totalReviews: number;
+    activeUsers: number;
+    totalPlaces: number;
+  };
+  distributions: {
+    tierCounts: Record<RatingTier, number>;
+    categoryCounts: Partial<Record<CategoryKey, number>>;
+  };
+  topReviewedPlaces: {
+    placeId: string;
+    placeName: string;
+    reviewCount: number;
+  }[];
+}
+
+// ===== Badge System Types =====
+
+/** Badge condition type */
+export type BadgeConditionType = 'review_count' | 'place_add' | 'tier_s' | 'avg_tier' | 'category_reviews';
+
+/** Badge rarity */
+export type BadgeRarity = 'common' | 'rare' | 'epic' | 'legendary';
+
+/** Badge definition */
+export interface Badge {
+  badgeId: string;
+  name: string;
+  description: string;
+  icon: string; // emoji
+  condition: {
+    type: BadgeConditionType;
+    threshold: number;
+    categoryKey?: CategoryKey; // for category_reviews type
+  };
+  rarity: BadgeRarity;
+}
+
+/** User's earned badge record */
+export interface UserBadge {
+  badgeId: string;
+  earnedAt: Date;
+}
+
+/** User's badge collection (stored at user_badges/{uid}) */
+export interface UserBadgeCollection {
+  uid: string;
+  badges: UserBadge[];
+  representativeBadgeId?: string; // 대표 뱃지
+  updatedAt: Date;
+}
