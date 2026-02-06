@@ -245,7 +245,7 @@ export default function NaverMapView({
     }, 100);
   }, [isLoaded, center.lat, center.lng, zoom, updateMarkersAndClusters]);
 
-  // 지도 중심/줌 업데이트
+  // 지도 중심/줌 업데이트 (명시적 이동 요청 시에만)
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -258,9 +258,12 @@ export default function NaverMapView({
       Math.abs(currentCenter.lng() - center.lng) > 0.0001;
     const zoomChanged = currentZoom !== zoom;
 
-    if (centerChanged || zoomChanged) {
+    // center가 변경된 경우에만 이동 (zoom만 변경된 경우는 사용자 조작이므로 무시)
+    if (centerChanged) {
       map.setCenter(new naver.maps.LatLng(center.lat, center.lng));
-      map.setZoom(zoom);
+      if (zoomChanged) {
+        map.setZoom(zoom);
+      }
     }
   }, [center.lat, center.lng, zoom]);
 
