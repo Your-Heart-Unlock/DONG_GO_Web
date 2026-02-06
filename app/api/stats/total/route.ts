@@ -3,6 +3,27 @@ import { adminDb } from '@/lib/firebase/admin';
 
 export const dynamic = 'force-dynamic';
 
+// 등급을 점수로 변환 (S=5, A=4, B=3, C=2, F=1)
+const TIER_TO_SCORE: Record<string, number> = {
+  S: 5,
+  A: 4,
+  B: 3,
+  C: 2,
+  F: 1,
+};
+
+// 최소 리뷰 수 기준 (m)
+const MIN_REVIEWS_THRESHOLD = 3;
+
+interface TopPlace {
+  placeId: string;
+  placeName: string;
+  reviewCount: number;
+  avgScore: number;
+  weightedScore: number;
+  avgTier: string;
+}
+
 interface TotalStats {
   totals: {
     totalPlaces: number;
@@ -13,11 +34,12 @@ interface TotalStats {
     tierCounts: Record<string, number>;
     categoryCounts: Record<string, number>;
   };
-  topReviewedPlaces: Array<{
-    placeId: string;
-    placeName: string;
-    reviewCount: number;
-  }>;
+  topPlaces: TopPlace[];
+  rankingInfo: {
+    formula: string;
+    minReviews: number;
+    globalAvgScore: number;
+  };
   generatedAt: Date;
 }
 
@@ -41,12 +63,25 @@ export async function GET() {
     const tierCounts: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, F: 0 };
     const categoryCounts: Record<string, number> = {};
 
+    // 식당별 리뷰 점수 합산
+    const placeScores: Map<string, { totalScore: number; count: number }> = new Map();
+
     reviewsSnapshot.forEach((doc) => {
       const data = doc.data();
 
       // 등급 카운트
       if (data.ratingTier && tierCounts.hasOwnProperty(data.ratingTier)) {
         tierCounts[data.ratingTier]++;
+
+        // 식당별 점수 합산
+        if (data.placeId) {
+          const score = TIER_TO_SCORE[data.ratingTier] || 0;
+          const existing = placeScores.get(data.placeId) || { totalScore: 0, count: 0 };
+          placeScores.set(data.placeId, {
+            totalScore: existing.totalScore + score,
+            count: existing.count + 1,
+          });
+        }
       }
 
       // 카테고리 카운트
@@ -62,24 +97,49 @@ export async function GET() {
       .get();
     const totalUsers = usersSnapshot.size;
 
-    // 4. 인기 장소 Top 10 (리뷰 수 기준)
-    const placeReviewCounts: Map<string, { name: string; count: number }> = new Map();
+    // 4. 전체 평균 점수 (C) 계산
+    let totalScoreSum = 0;
+    let totalScoreCount = 0;
+    placeScores.forEach(({ totalScore, count }) => {
+      totalScoreSum += totalScore;
+      totalScoreCount += count;
+    });
+    const globalAvgScore = totalScoreCount > 0 ? totalScoreSum / totalScoreCount : 3; // 기본값 3 (B등급)
 
+    // 5. 가중 평균 점수로 Top 10 계산
+    // 공식: 점수 = (v/(v+m)) × R + (m/(v+m)) × C
+    // v = 리뷰 수, m = 최소 리뷰 기준, R = 식당 평균, C = 전체 평균
+    const m = MIN_REVIEWS_THRESHOLD;
+    const C = globalAvgScore;
+
+    const placeData: Map<string, { name: string; avgTier: string }> = new Map();
     placesSnapshot.forEach((doc) => {
       const data = doc.data();
-      placeReviewCounts.set(doc.id, {
+      placeData.set(doc.id, {
         name: data.name || '이름 없음',
-        count: data.reviewCount || 0,
+        avgTier: data.avgTier || '-',
       });
     });
 
-    const topReviewedPlaces = Array.from(placeReviewCounts.entries())
-      .map(([placeId, { name, count }]) => ({
-        placeId,
-        placeName: name,
-        reviewCount: count,
-      }))
-      .sort((a, b) => b.reviewCount - a.reviewCount)
+    const topPlaces: TopPlace[] = Array.from(placeScores.entries())
+      .map(([placeId, { totalScore, count }]) => {
+        const v = count; // 리뷰 수
+        const R = totalScore / count; // 식당 평균 점수
+
+        // 가중 평균 공식 적용
+        const weightedScore = (v / (v + m)) * R + (m / (v + m)) * C;
+
+        const place = placeData.get(placeId);
+        return {
+          placeId,
+          placeName: place?.name || '이름 없음',
+          reviewCount: v,
+          avgScore: Math.round(R * 100) / 100,
+          weightedScore: Math.round(weightedScore * 100) / 100,
+          avgTier: place?.avgTier || '-',
+        };
+      })
+      .sort((a, b) => b.weightedScore - a.weightedScore)
       .slice(0, 10);
 
     const stats: TotalStats = {
@@ -92,7 +152,12 @@ export async function GET() {
         tierCounts,
         categoryCounts,
       },
-      topReviewedPlaces,
+      topPlaces,
+      rankingInfo: {
+        formula: '(v/(v+m)) × R + (m/(v+m)) × C',
+        minReviews: m,
+        globalAvgScore: Math.round(C * 100) / 100,
+      },
       generatedAt: new Date(),
     };
 

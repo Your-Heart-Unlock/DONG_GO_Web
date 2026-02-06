@@ -22,6 +22,15 @@ const TIER_LABELS: Record<RatingTier, string> = {
   F: '지뢰',
 };
 
+interface TopPlace {
+  placeId: string;
+  placeName: string;
+  reviewCount: number;
+  avgScore: number;
+  weightedScore: number;
+  avgTier: string;
+}
+
 interface TotalStats {
   totals: {
     totalPlaces: number;
@@ -32,11 +41,12 @@ interface TotalStats {
     tierCounts: Record<string, number>;
     categoryCounts: Record<string, number>;
   };
-  topReviewedPlaces: Array<{
-    placeId: string;
-    placeName: string;
-    reviewCount: number;
-  }>;
+  topPlaces: TopPlace[];
+  rankingInfo: {
+    formula: string;
+    minReviews: number;
+    globalAvgScore: number;
+  };
   generatedAt: string;
 }
 
@@ -44,6 +54,7 @@ export default function StatsPage() {
   const { user, loading: authLoading } = useAuth();
   const [stats, setStats] = useState<TotalStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showFormulaInfo, setShowFormulaInfo] = useState(false);
 
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
@@ -225,26 +236,72 @@ export default function StatsPage() {
               </div>
             )}
 
-            {/* 인기 장소 Top 10 */}
-            {stats.topReviewedPlaces.length > 0 && (
+            {/* 맛집 Top 10 (가중 평균) */}
+            {stats.topPlaces && stats.topPlaces.length > 0 && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">인기 장소 Top 10</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">맛집 Top 10</h3>
+                  <button
+                    type="button"
+                    onClick={() => setShowFormulaInfo(!showFormulaInfo)}
+                    className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    점수 계산 방식
+                  </button>
+                </div>
+
+                {/* 점수 계산 설명 */}
+                {showFormulaInfo && (
+                  <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+                    <p className="text-sm font-medium text-blue-900 mb-2">가중 평균 점수 (IMDB 방식)</p>
+                    <div className="bg-white rounded p-3 mb-3 font-mono text-sm text-center text-blue-800">
+                      점수 = (v/(v+m)) × R + (m/(v+m)) × C
+                    </div>
+                    <ul className="text-xs text-blue-800 space-y-1">
+                      <li><strong>v</strong> = 해당 식당의 리뷰 수</li>
+                      <li><strong>m</strong> = 최소 리뷰 기준 ({stats.rankingInfo.minReviews}개)</li>
+                      <li><strong>R</strong> = 해당 식당의 평균 점수</li>
+                      <li><strong>C</strong> = 전체 평균 점수 ({stats.rankingInfo.globalAvgScore}점)</li>
+                    </ul>
+                    <p className="text-xs text-blue-700 mt-3 pt-2 border-t border-blue-200">
+                      리뷰 수가 적은 식당은 전체 평균에 가깝게 보정되어, 소수의 극단적 리뷰가 순위에 과도하게 영향을 주는 것을 방지합니다.
+                    </p>
+                    <div className="mt-3 pt-2 border-t border-blue-200">
+                      <p className="text-xs text-blue-600">등급별 점수: S=5, A=4, B=3, C=2, F=1</p>
+                    </div>
+                  </div>
+                )}
+
                 <div className="space-y-2">
-                  {stats.topReviewedPlaces.map((place, index) => (
+                  {stats.topPlaces.map((place, index) => (
                     <Link
                       key={place.placeId}
                       href={`/places/${place.placeId}`}
-                      className="flex items-center gap-3 p-2 -mx-2 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-3 p-3 -mx-2 rounded-lg hover:bg-gray-50 transition-colors"
                     >
-                      <span className="w-6 text-sm font-medium text-gray-500">
-                        #{index + 1}
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        index === 0 ? 'bg-yellow-100 text-yellow-700' :
+                        index === 1 ? 'bg-gray-100 text-gray-600' :
+                        index === 2 ? 'bg-orange-100 text-orange-700' :
+                        'bg-gray-50 text-gray-500'
+                      }`}>
+                        {index + 1}
                       </span>
-                      <span className="flex-1 text-sm font-medium text-gray-900 truncate">
-                        {place.placeName}
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        {place.reviewCount}개 리뷰
-                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {place.placeName}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {place.reviewCount}개 리뷰 · 평균 {place.avgTier}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-bold text-blue-600">{place.weightedScore.toFixed(2)}</p>
+                        <p className="text-xs text-gray-400">점</p>
+                      </div>
                     </Link>
                   ))}
                 </div>
