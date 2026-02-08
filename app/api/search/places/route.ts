@@ -163,19 +163,24 @@ async function searchNaver(query: string, page: number, size: number): Promise<{
 }
 
 /**
- * 장소 검색 API (카카오 우선, 실패 시 네이버 폴백)
- * GET /api/search/places?query=검색어&page=1
+ * 장소 검색 API
+ * GET /api/search/places?query=검색어&page=1&provider=kakao
+ *
+ * provider 파라미터:
+ * - 'kakao' (기본값): 카카오만 검색
+ * - 'naver': 네이버만 검색
  *
  * 필요한 환경변수:
  * - KAKAO_REST_API_KEY (카카오)
- * - NAVER_SEARCH_CLIENT_ID, NAVER_SEARCH_CLIENT_SECRET (네이버 폴백)
+ * - NAVER_SEARCH_CLIENT_ID, NAVER_SEARCH_CLIENT_SECRET (네이버)
  */
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const query = searchParams.get('query');
     const page = parseInt(searchParams.get('page') || '1');
-    const size = 10;
+    const provider = (searchParams.get('provider') || 'kakao') as 'kakao' | 'naver';
+    const size = provider === 'naver' ? 5 : 10;
 
     if (!query || query.trim().length < 2) {
       return NextResponse.json(
@@ -184,18 +189,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // 1. 카카오 검색 시도
-    let result = await searchKakao(query, page, size);
-    let searchSource: 'kakao' | 'naver' = 'kakao';
+    let result;
+    let searchSource: 'kakao' | 'naver';
 
-    // 2. 카카오 실패 또는 결과 없음 → 네이버 폴백
-    if (!result || result.places.length === 0) {
-      console.log(`[search/places] 카카오 검색 ${!result ? '실패' : '결과 없음'}, 네이버 폴백 시도`);
+    if (provider === 'naver') {
+      // 네이버 직접 검색
       result = await searchNaver(query, page, size);
       searchSource = 'naver';
+    } else {
+      // 카카오 검색 (폴백 없음)
+      result = await searchKakao(query, page, size);
+      searchSource = 'kakao';
     }
 
-    // 3. 둘 다 실패
     if (!result) {
       return NextResponse.json(
         { error: '검색에 실패했습니다. 잠시 후 다시 시도해주세요.' },

@@ -67,33 +67,37 @@ const visitsData = reviews.filter(r => r.visitedAt);
 - 썸네일 생성 (Cloud Functions 또는 클라이언트)
 - 갤러리 UI: 그리드 레이아웃, 라이트박스
 
-### 3. 지도 링크 동적 처리
-**목표**: placeId 출처에 따라 네이버 또는 카카오 지도 링크
+### 3. 지도 링크 동적 처리 ✅
+**목표**: 네이버/카카오 버튼이 각 지도의 상세 페이지로 직접 이동
 
-**현재**: 모든 장소에 네이버 지도 링크
-**개선**:
+**구현**: `naverPlaceId`/`kakaoPlaceId` 필드 기반 직접 링크
 ```tsx
-const mapUrl = place.placeId.startsWith('kakao_')
-  ? `https://place.map.kakao.com/${place.placeId.replace('kakao_', '')}`
-  : `https://map.naver.com/p/entry/place/${place.placeId}`;
+// 네이버 URL: naverPlaceId가 있으면 직접 링크
+const naverUrl = place.naverPlaceId
+  ? `https://map.naver.com/p/entry/place/${place.naverPlaceId}`
+  : place.mapProvider === 'naver'
+    ? `https://map.naver.com/p/entry/place/${place.placeId}`
+    : `https://map.naver.com/search/${searchQuery}`;
+
+// 카카오 URL: kakaoPlaceId가 있으면 직접 링크
+const kakaoUrl = place.kakaoPlaceId
+  ? `https://place.map.kakao.com/${place.kakaoPlaceId}`
+  : place.mapProvider === 'kakao'
+    ? `https://place.map.kakao.com/${place.placeId}`
+    : `https://map.kakao.com/?q=${searchQuery}`;
 ```
 
-또는 places 문서에 `mapProvider` 필드 추가:
-```typescript
-interface Place {
-  // ...
-  mapProvider: 'naver' | 'kakao';
-  kakaoPlaceUrl?: string;
-}
-```
+**크로스 ID 매칭**: 장소 추가 시 `naver-resolve`/`kakao-resolve` API로 양쪽 ID 확보
+- 매칭 성공 시: 직접 상세 페이지 링크
+- 매칭 실패 시: 검색 URL 폴백 (기존 동작)
 
 ## 체크포인트
 - [x] 기본 정보 및 stats 표시
 - [x] member/owner만 리뷰 리스트 표시
 - [x] pending/guest 잠금 UI
 - [ ] 방문 기록 표시
-- [ ] 사진 갤러리 (Storage 연동)
-- [ ] 지도 링크 동적 처리
+- [x] 사진 갤러리 (Storage 연동)
+- [x] 지도 링크 동적 처리 (크로스 ID 기반)
 
 ## 참고 문서
 - [REF_USER_EXPERIENCE.md](REF_USER_EXPERIENCE.md) - B 정책 상세

@@ -78,59 +78,40 @@ await setDoc(doc(db, 'places', placeId), {
 });
 ```
 
-## 미구현 항목 ⚠️
+### 6. 네이버 검색 폴백 UI ✅
+**파일**: `app/add/page.tsx`
 
-### 좌표 기반 중복 체크
-**문제점**: 
-- 네이버 ID와 카카오 ID가 다른 경우 → 같은 장소가 2번 등록 가능
-- naver-resolve 매칭 실패 시 중복 발생
+카카오 검색 결과가 0건일 때 네이버 검색을 안내:
+- "네이버에서 검색하기" 버튼 표시 (카카오 0건 시)
+- 네이버 검색 모드 전환 (상단 안내 배너)
+- 도움말: "네이버 검색은 최대 5개 결과. 식당 이름 뒤에 지역명 추가 권장"
+- 카카오/네이버 검색 모드 전환 가능
 
-**해결 방안**:
-1. **모든 places에서 거리 계산** (간단하지만 느림)
-   ```typescript
-   const allPlaces = await getDocs(collection(db, 'places'));
-   const nearby = allPlaces.docs.find(doc => {
-     const distance = calculateDistance(
-       lat, lng,
-       doc.data().lat, doc.data().lng
-     );
-     return distance < 100; // 100m 이내
-   });
-   ```
+**검색 API**: `app/api/search/places/route.ts`
+- `provider` 쿼리 파라미터 추가 (`kakao` | `naver`, 기본값: `kakao`)
+- 각 provider별 독립 검색 (자동 폴백 제거)
 
-2. **geohash 기반 범위 검색** (권장)
-   - places에 `geohash` 필드 추가
-   - 9자 geohash = 약 5m x 5m
-   - 검색 시 주변 geohash prefix 쿼리
+### 7. 크로스 지도 ID 매칭 ✅
+**목표**: 장소 추가 시 카카오/네이버 양쪽 지도 상세 페이지 ID를 확보
 
-   ```typescript
-   import geohash from 'ngeohash';
-   
-   const hash = geohash.encode(lat, lng, 9);
-   const neighbors = geohash.neighbors(hash);
-   
-   // 현재 + 인접 9개 geohash에서 검색
-   const candidates = await Promise.all(
-     [hash, ...Object.values(neighbors)].map(h =>
-       getDocs(query(
-         collection(db, 'places'),
-         where('geohash', '>=', h.slice(0, 7)),
-         where('geohash', '<=', h.slice(0, 7) + '~')
-       ))
-     )
-   );
-   
-   // 정확한 거리 계산으로 최종 확인
-   ```
+**Place 필드 추가** (`types/index.ts`):
+- `naverPlaceId` (string, optional) - 네이버 지도 상세 페이지 ID
+- `kakaoPlaceId` (string, optional) - 카카오 지도 상세 페이지 ID
 
-3. **places Import 시 geohash 자동 추가**
-   ```typescript
-   // lib/admin/importParser.ts
-   import geohash from 'ngeohash';
-   
-   const hash = geohash.encode(lat, lng, 9);
-   placeData.geohash = hash;
-   ```
+**매칭 API**:
+- 카카오→네이버: `app/api/search/naver-resolve/route.ts` (기존)
+- 네이버→카카오: `app/api/search/kakao-resolve/route.ts` (신규)
+
+**장소 추가 시 동작**:
+```typescript
+// 카카오로 추가 시
+kakaoPlaceId = place.placeId;
+naverPlaceId = naver-resolve API 결과; // 없으면 undefined
+
+// 네이버로 추가 시
+naverPlaceId = place.placeId에서 naver_ 접두사 제거;
+kakaoPlaceId = kakao-resolve API 결과; // 없으면 undefined
+```
 
 ## 체크포인트
 - [x] 카카오 검색 API 연동
@@ -140,7 +121,10 @@ await setDoc(doc(db, 'places', placeId), {
 - [x] 장소 생성 (Firestore)
 - [x] geohash 또는 cellId 추가
 - [x] 좌표 기반 중복 체크
+- [x] 네이버 검색 폴백 UI
+- [x] 크로스 지도 ID 매칭 (naverPlaceId, kakaoPlaceId)
 
 ## 참고 문서
 - [02_DATA_MODEL.md](02_DATA_MODEL.md) - places 스키마
 - [IMPL-J_ADMIN_CONSOLE.md](IMPL-J_ADMIN_CONSOLE.md) - Import 시 geohash 적용
+- [IMPL-F_PLACE_DETAIL.md](IMPL-F_PLACE_DETAIL.md) - 지도 링크 동적 처리

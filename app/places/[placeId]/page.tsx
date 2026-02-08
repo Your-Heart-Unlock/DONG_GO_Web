@@ -7,7 +7,7 @@ import { auth, db } from '@/lib/firebase/client';
 import { getPlaceById } from '@/lib/firebase/places';
 import { collection, query, where, limit, getDocs } from 'firebase/firestore';
 import { getPlaceStats } from '@/lib/firebase/reviews';
-import { Place, PlaceStats, RatingTier, MapProvider, CategoryKey } from '@/types';
+import { Place, PlaceStats, RatingTier, CategoryKey } from '@/types';
 import { CATEGORY_LABELS, ALL_CATEGORY_KEYS } from '@/lib/utils/categoryIcon';
 import ReviewList from '@/components/reviews/ReviewList';
 import PhotoGallery from '@/components/photos/PhotoGallery';
@@ -258,15 +258,6 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
     );
   }
 
-  // 지도 제공자 판별: mapProvider 필드 우선, 없으면 source로 추정
-  function getMapProvider(p: Place): MapProvider {
-    if (p.mapProvider) return p.mapProvider;
-    // 기존 데이터 하위 호환: naver_import는 네이버
-    return p.source === 'naver_import' ? 'naver' : 'kakao';
-  }
-
-  const provider = getMapProvider(place);
-
   // 주소에서 "구"까지만 추출 (예: "서울특별시 강남구 역삼동 123" → "강남구")
   function getShortAddress(address: string): string {
     const match = address.match(/([가-힣]+구)/);
@@ -276,15 +267,19 @@ export default function PlaceDetailPage({ params }: PlaceDetailPageProps) {
   const shortAddress = getShortAddress(place.address);
   const searchQuery = encodeURIComponent(place.name + (shortAddress ? ' ' + shortAddress : ''));
 
-  // 네이버 지도 URL (항상 표시: 직접 링크 또는 검색)
-  const naverUrl = provider === 'naver'
-    ? `https://map.naver.com/p/entry/place/${place.placeId}` // 네이버 ID가 있으면 직접 링크
-    : `https://map.naver.com/search/${searchQuery}`; // 없으면 검색
+  // 네이버 지도 URL: naverPlaceId가 있으면 직접 링크, 없으면 검색 폴백
+  const naverUrl = place.naverPlaceId
+    ? `https://map.naver.com/p/entry/place/${place.naverPlaceId}`
+    : place.mapProvider === 'naver'
+      ? `https://map.naver.com/p/entry/place/${place.placeId}`
+      : `https://map.naver.com/search/${searchQuery}`;
 
-  // 카카오 지도 URL (항상 표시: 직접 링크 또는 검색)
-  const kakaoUrl = provider === 'kakao'
-    ? `https://place.map.kakao.com/${place.placeId}` // 카카오 ID가 있으면 직접 링크
-    : `https://map.kakao.com/?q=${searchQuery}`; // 없으면 검색
+  // 카카오 지도 URL: kakaoPlaceId가 있으면 직접 링크, 없으면 검색 폴백
+  const kakaoUrl = place.kakaoPlaceId
+    ? `https://place.map.kakao.com/${place.kakaoPlaceId}`
+    : place.mapProvider === 'kakao'
+      ? `https://place.map.kakao.com/${place.placeId}`
+      : `https://map.kakao.com/?q=${searchQuery}`;
 
   return (
     <div className="min-h-screen bg-gray-50">

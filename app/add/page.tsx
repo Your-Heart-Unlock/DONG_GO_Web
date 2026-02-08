@@ -37,6 +37,7 @@ interface SearchResult {
   lng: number;
   telephone?: string;
   link?: string;
+  source?: 'kakao' | 'naver';
 }
 
 interface Pagination {
@@ -45,6 +46,8 @@ interface Pagination {
   totalPages: number;
   hasMore: boolean;
 }
+
+type SearchProvider = 'kakao' | 'naver';
 
 function AddPlaceContent() {
   const router = useRouter();
@@ -58,6 +61,8 @@ function AddPlaceContent() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [error, setError] = useState('');
   const [adding, setAdding] = useState<string | null>(null);
+  const [searchProvider, setSearchProvider] = useState<SearchProvider>('kakao');
+  const [kakaoNoResults, setKakaoNoResults] = useState(false);
 
   // 카테고리 선택 모달 상태
   const [pendingPlace, setPendingPlace] = useState<SearchResult | null>(null);
@@ -66,7 +71,7 @@ function AddPlaceContent() {
   const isMemberOrOwner = user?.role === 'member' || user?.role === 'owner';
 
   // 검색 실행 (공통 로직)
-  const performSearch = useCallback(async (searchQuery: string) => {
+  const performSearch = useCallback(async (searchQuery: string, provider: SearchProvider = 'kakao') => {
     if (!searchQuery.trim() || searchQuery.trim().length < 2) {
       setError('검색어는 2글자 이상 입력해주세요.');
       return;
@@ -76,9 +81,12 @@ function AddPlaceContent() {
     setError('');
     setResults([]);
     setPagination(null);
+    setKakaoNoResults(false);
 
     try {
-      const response = await fetch(`/api/search/places?query=${encodeURIComponent(searchQuery)}&page=1`);
+      const response = await fetch(
+        `/api/search/places?query=${encodeURIComponent(searchQuery)}&page=1&provider=${provider}`
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -89,7 +97,12 @@ function AddPlaceContent() {
       setPagination(data.pagination);
 
       if (data.places.length === 0) {
-        setError('검색 결과가 없습니다.');
+        if (provider === 'kakao') {
+          setKakaoNoResults(true);
+        }
+        setError(provider === 'naver'
+          ? '네이버 검색 결과가 없습니다. 지역명을 추가하여 다시 검색해보세요.'
+          : '카카오 검색 결과가 없습니다.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : '검색 중 오류가 발생했습니다.');
@@ -110,7 +123,25 @@ function AddPlaceContent() {
   // 폼 제출
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    performSearch(query);
+    performSearch(query, searchProvider);
+  };
+
+  // 네이버 검색으로 전환
+  const handleSwitchToNaver = () => {
+    setSearchProvider('naver');
+    setKakaoNoResults(false);
+    setError('');
+    setResults([]);
+    setPagination(null);
+  };
+
+  // 카카오 검색으로 복귀
+  const handleSwitchToKakao = () => {
+    setSearchProvider('kakao');
+    setKakaoNoResults(false);
+    setError('');
+    setResults([]);
+    setPagination(null);
   };
 
   // 더 보기
@@ -121,7 +152,9 @@ function AddPlaceContent() {
     setLoadingMore(true);
 
     try {
-      const response = await fetch(`/api/search/places?query=${encodeURIComponent(query)}&page=${nextPage}`);
+      const response = await fetch(
+        `/api/search/places?query=${encodeURIComponent(query)}&page=${nextPage}&provider=${searchProvider}`
+      );
       const data = await response.json();
 
       if (!response.ok) {
@@ -147,6 +180,44 @@ function AddPlaceContent() {
     setSelectedCategory(null);
   };
 
+  // 크로스 ID resolve (비동기, 실패해도 장소 추가는 진행)
+  async function resolveCrossIds(place: SearchResult, provider: SearchProvider): Promise<{
+    naverPlaceId?: string;
+    kakaoPlaceId?: string;
+  }> {
+    const crossIds: { naverPlaceId?: string; kakaoPlaceId?: string } = {};
+
+    try {
+      if (provider === 'kakao') {
+        // 카카오로 추가 → 네이버 ID 매칭
+        crossIds.kakaoPlaceId = place.placeId;
+        const res = await fetch(
+          `/api/search/naver-resolve?name=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}`
+        );
+        const data = await res.json();
+        if (data.naverPlaceId) {
+          crossIds.naverPlaceId = data.naverPlaceId;
+        }
+      } else {
+        // 네이버로 추가 → 카카오 ID 매칭
+        // naver_ 접두사 제거하여 순수 네이버 ID 저장
+        const rawNaverId = place.placeId.replace(/^naver_/, '');
+        crossIds.naverPlaceId = rawNaverId;
+        const res = await fetch(
+          `/api/search/kakao-resolve?name=${encodeURIComponent(place.name)}&lat=${place.lat}&lng=${place.lng}`
+        );
+        const data = await res.json();
+        if (data.kakaoPlaceId) {
+          crossIds.kakaoPlaceId = data.kakaoPlaceId;
+        }
+      }
+    } catch (err) {
+      console.warn('크로스 ID resolve 실패 (장소 추가는 계속 진행):', err);
+    }
+
+    return crossIds;
+  }
+
   // 카테고리 선택 후 장소 추가
   const handleConfirmAdd = async () => {
     if (!pendingPlace || !selectedCategory || !firebaseUser) return;
@@ -156,8 +227,8 @@ function AddPlaceContent() {
     setPendingPlace(null);
 
     try {
-      // 카카오 ID를 placeId로 사용 (네이버/카카오 모두 이름+주소 검색으로 연결)
       const finalPlaceId = place.placeId;
+      const isNaver = searchProvider === 'naver' || place.source === 'naver';
 
       // 1. ID 기반 중복 체크
       const existing = await getPlaceById(finalPlaceId);
@@ -168,7 +239,7 @@ function AddPlaceContent() {
             `"${place.name}"은(는) 이전에 삭제된 장소입니다.\n다시 활성화하시겠습니까?`
           );
           if (reactivate) {
-            // 삭제된 장소를 새 데이터로 재활성화
+            const crossIds = await resolveCrossIds(place, isNaver ? 'naver' : 'kakao');
             await updatePlace(finalPlaceId, {
               name: place.name,
               address: place.address,
@@ -177,7 +248,9 @@ function AddPlaceContent() {
               category: CATEGORY_LABELS[selectedCategory],
               categoryKey: selectedCategory,
               status: 'active',
-              mapProvider: 'kakao',
+              mapProvider: isNaver ? 'naver' : 'kakao',
+              ...(crossIds.naverPlaceId && { naverPlaceId: crossIds.naverPlaceId }),
+              ...(crossIds.kakaoPlaceId && { kakaoPlaceId: crossIds.kakaoPlaceId }),
             });
             alert(`"${place.name}"이(가) 다시 활성화되었습니다.`);
             router.push(`/places/${finalPlaceId}`);
@@ -215,7 +288,10 @@ function AddPlaceContent() {
         // 취소를 누르면 계속 진행 (새로 추가)
       }
 
-      // 신규 생성 (선택된 카테고리 사용)
+      // 3. 크로스 ID resolve
+      const crossIds = await resolveCrossIds(place, isNaver ? 'naver' : 'kakao');
+
+      // 4. 신규 생성 (선택된 카테고리 사용)
       await createPlace({
         placeId: finalPlaceId,
         name: place.name,
@@ -226,7 +302,9 @@ function AddPlaceContent() {
         categoryKey: selectedCategory, // CategoryKey
         source: 'user_added',
         status: 'active',
-        mapProvider: 'kakao', // 카카오 검색 기반으로 추가됨
+        mapProvider: isNaver ? 'naver' : 'kakao',
+        ...(crossIds.naverPlaceId && { naverPlaceId: crossIds.naverPlaceId }),
+        ...(crossIds.kakaoPlaceId && { kakaoPlaceId: crossIds.kakaoPlaceId }),
         createdBy: firebaseUser.uid,
       });
 
@@ -296,6 +374,27 @@ function AddPlaceContent() {
       </header>
 
       <main className="max-w-2xl mx-auto p-4 space-y-6">
+        {/* 검색 모드 표시 */}
+        {searchProvider === 'naver' && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-green-600 font-bold text-lg flex-shrink-0">N</span>
+              <div className="flex-1">
+                <p className="text-green-800 font-medium text-sm">네이버 검색 모드</p>
+                <p className="text-green-700 text-xs mt-1">
+                  네이버 검색은 최대 5개 결과만 제공합니다. 정확한 검색을 위해 식당 이름 뒤에 지역명(예: &apos;맛집이름 강남&apos;)을 추가해주세요.
+                </p>
+              </div>
+              <button
+                onClick={handleSwitchToKakao}
+                className="flex-shrink-0 text-xs text-green-700 underline hover:text-green-900"
+              >
+                카카오로 돌아가기
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 검색 폼 */}
         <form onSubmit={handleSearch} className="space-y-3">
           <div className="flex gap-2">
@@ -303,27 +402,62 @@ function AddPlaceContent() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="장소명 또는 주소 검색..."
+              placeholder={searchProvider === 'naver'
+                ? "식당 이름 + 지역명 (예: 맛집이름 강남)"
+                : "장소명 또는 주소 검색..."
+              }
               className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               disabled={searching}
             />
             <button
               type="submit"
               disabled={searching || !query.trim()}
-              className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className={`px-6 py-3 text-white font-medium rounded-lg disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors ${
+                searchProvider === 'naver'
+                  ? 'bg-green-600 hover:bg-green-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               {searching ? '검색 중...' : '검색'}
             </button>
           </div>
           <p className="text-xs text-gray-500">
-            카카오 지도에서 장소를 검색하여 추가합니다.
+            {searchProvider === 'naver'
+              ? '네이버 지도에서 장소를 검색하여 추가합니다.'
+              : '카카오 지도에서 장소를 검색하여 추가합니다.'
+            }
           </p>
         </form>
 
         {/* 에러 메시지 */}
-        {error && (
+        {error && !kakaoNoResults && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700 text-sm">
             {error}
+          </div>
+        )}
+
+        {/* 카카오 0건 → 네이버 검색 안내 */}
+        {kakaoNoResults && searchProvider === 'kakao' && (
+          <div className="bg-orange-50 border border-orange-200 rounded-lg p-5 space-y-3">
+            <div className="flex items-start gap-3">
+              <svg className="w-6 h-6 text-orange-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+              <div>
+                <p className="text-orange-800 font-medium">
+                  카카오에서 &quot;{query}&quot;에 대한 결과를 찾지 못했습니다.
+                </p>
+                <p className="text-orange-700 text-sm mt-1">
+                  카카오 지도에 등록되지 않은 장소일 수 있습니다. 네이버에서 검색해보세요.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={handleSwitchToNaver}
+              className="w-full py-3 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-colors"
+            >
+              네이버에서 검색하기
+            </button>
           </div>
         )}
 
@@ -332,6 +466,11 @@ function AddPlaceContent() {
           <div className="space-y-3">
             <h2 className="text-sm font-medium text-gray-700">
               검색 결과 {pagination ? `(${results.length} / ${pagination.total}개)` : `(${results.length}개)`}
+              {searchProvider === 'naver' && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
+                  네이버
+                </span>
+              )}
             </h2>
             <div className="space-y-2">
               {results.map((place) => (
@@ -351,6 +490,11 @@ function AddPlaceContent() {
                         <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700">
                           {place.category}
                         </span>
+                        {place.source === 'naver' && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">
+                            네이버
+                          </span>
+                        )}
                         {place.telephone && (
                           <span className="text-xs text-gray-500">
                             {place.telephone}
@@ -382,7 +526,7 @@ function AddPlaceContent() {
         )}
 
         {/* 안내 */}
-        {results.length === 0 && !error && !searching && (
+        {results.length === 0 && !error && !searching && !kakaoNoResults && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
             <svg className="w-12 h-12 text-blue-400 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />

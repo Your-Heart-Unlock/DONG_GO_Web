@@ -15,11 +15,15 @@
 - lng (number)
 - category (string) - UI 표시용 (예: "음식점", "카페")
 - categoryCode (string, optional) - 필터링용 코드
+- categoryKey (string, optional) - 카테고리 아이콘용 (예: "Korea")
 - createdBy (string) - uid
 - createdAt (Timestamp)
 - updatedAt (Timestamp, optional)
 - source: naver_import | user_added
 - status: active | hidden | deleted
+- mapProvider (string, optional) - 'naver' | 'kakao', 등록 시 사용된 검색 제공자
+- naverPlaceId (string, optional) - 네이버 지도 상세 페이지용 ID (순수 숫자)
+- kakaoPlaceId (string, optional) - 카카오 지도 상세 페이지용 ID (순수 숫자)
 - cellId (string, optional) - 지도 그리드 인덱스 (REF_MAP_STRATEGY.md 참고)
 - geohash (string, optional) - 좌표 기반 검색용 인덱스
 

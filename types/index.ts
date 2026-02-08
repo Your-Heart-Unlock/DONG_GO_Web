@@ -42,6 +42,8 @@ export interface Place {
   source: PlaceSource;
   status: PlaceStatus;
   mapProvider?: MapProvider; // 지도 제공자 (naver/kakao), 없으면 source로 추정
+  naverPlaceId?: string; // 네이버 지도 상세 페이지용 ID (순수 숫자)
+  kakaoPlaceId?: string; // 카카오 지도 상세 페이지용 ID (순수 숫자)
   cellId?: string; // 그리드 cellId (bounds 기반 쿼리용)
   geohash?: string; // 좌표 기반 중복 체크용 (9자리)
   avgTier?: RatingTier | null; // 평균 등급 (마커 색상용, null=리뷰 없음)

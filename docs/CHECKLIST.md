@@ -18,6 +18,8 @@
    - Import 시 mapProvider: 'naver' 자동 설정
    - 장소 상세 페이지에서 mapProvider 기반 동적 URL/버튼 렌더링
    - 기존 데이터 하위 호환 (mapProvider 없으면 source로 추정)
+   - [x] **크로스 지도 ID 매칭** - naverPlaceId/kakaoPlaceId 필드로 양쪽 상세 페이지 직접 링크
+   - [x] **네이버 검색 폴백** - 카카오 0건 시 네이버 검색 UI + 도움말
 
 **완료 시**: MVP 100% → 실제 사용 가능 🎉
 
@@ -218,7 +220,7 @@
   - [x] 사진 갤러리 표시 (PhotoGallery 컴포넌트 + 상세 페이지 연동 완료)
 - [x] pending/guest일 때:
   - [x] 리뷰/방문/사진 UI는 "잠금 상태"로 표시(안내 문구)
-- [x] **지도 링크 동적 처리** (mapProvider 필드 기반 네이버/카카오 자동 분기)
+- [x] **지도 링크 동적 처리** (naverPlaceId/kakaoPlaceId 기반 크로스 직접 링크 + 검색 폴백)
 
 ---
 
@@ -230,6 +232,8 @@
 - [x] place 생성 시 최소 필드 검증
 - [x] 검색 페이지네이션 (10개씩)
 - [x] **좌표 기반 중복 체크** (ID 다르지만 같은 위치 ~100m 이내 감지, geohash 기반)
+- [x] **네이버 검색 폴백** (카카오 0건 → 네이버 검색 모드 전환 + 도움말)
+- [x] **크로스 ID 매칭** (naverPlaceId/kakaoPlaceId, naver-resolve + kakao-resolve)
 
 ---
 
