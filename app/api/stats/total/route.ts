@@ -63,6 +63,15 @@ export async function GET() {
     const tierCounts: Record<string, number> = { S: 0, A: 0, B: 0, C: 0, F: 0 };
     const categoryCounts: Record<string, number> = {};
 
+    // 장소별 categoryKey 맵 생성
+    const placeCategoryMap: Map<string, string> = new Map();
+    placesSnapshot.forEach((doc) => {
+      const data = doc.data();
+      if (data.categoryKey) {
+        placeCategoryMap.set(doc.id, data.categoryKey);
+      }
+    });
+
     // 식당별 리뷰 점수 합산
     const placeScores: Map<string, { totalScore: number; count: number }> = new Map();
 
@@ -81,12 +90,13 @@ export async function GET() {
             totalScore: existing.totalScore + score,
             count: existing.count + 1,
           });
-        }
-      }
 
-      // 카테고리 카운트
-      if (data.categoryKey) {
-        categoryCounts[data.categoryKey] = (categoryCounts[data.categoryKey] || 0) + 1;
+          // 카테고리 카운트 (장소의 categoryKey 사용)
+          const categoryKey = placeCategoryMap.get(data.placeId);
+          if (categoryKey) {
+            categoryCounts[categoryKey] = (categoryCounts[categoryKey] || 0) + 1;
+          }
+        }
       }
     });
 
