@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { db } from '@/lib/firebase/client';
 import { doc, getDoc } from 'firebase/firestore';
-import { getCurrentMonthKey, formatMonthKey } from '@/lib/utils/monthKey';
+import { getPreviousMonthKey, formatMonthKey } from '@/lib/utils/monthKey';
 import { MonthlyLeaderboard } from '@/types';
 
 interface HallOfFamePreviewProps {
@@ -24,7 +24,7 @@ export default function HallOfFamePreview({ expandDirection = 'down' }: HallOfFa
       }
 
       try {
-        const monthKey = getCurrentMonthKey();
+        const monthKey = getPreviousMonthKey();
         const leaderboardRef = doc(db, 'monthly_leaderboard', monthKey);
         const snapshot = await getDoc(leaderboardRef);
 
@@ -50,7 +50,7 @@ export default function HallOfFamePreview({ expandDirection = 'down' }: HallOfFa
     fetchLeaderboard();
   }, []);
 
-  const monthKey = getCurrentMonthKey();
+  const monthKey = getPreviousMonthKey();
   const top3 = leaderboard?.overallTop?.slice(0, 3) || [];
   const hasData = top3.length > 0;
 
@@ -113,8 +113,8 @@ export default function HallOfFamePreview({ expandDirection = 'down' }: HallOfFa
           <div className="p-4">
             {!hasData ? (
               <div className="text-center py-4">
-                <p className="text-gray-500 text-sm">아직 이번 달 데이터가 없어요</p>
-                <p className="text-gray-400 text-xs mt-1">리뷰를 작성해보세요!</p>
+                <p className="text-gray-500 text-sm">지난 달 데이터가 없어요</p>
+                <p className="text-gray-400 text-xs mt-1">이번 달 리뷰를 작성해보세요!</p>
               </div>
             ) : (
               <div className="space-y-2">

@@ -29,6 +29,13 @@ export default function AdminDashboard() {
   const [snapshotResult, setSnapshotResult] = useState<string | null>(null);
   const [snapshotting, setSnapshotting] = useState(false);
 
+  // 월별 데이터 확인/생성 상태
+  const [monthlyDataResult, setMonthlyDataResult] = useState<string | null>(null);
+  const [checkingMonthlyData, setCheckingMonthlyData] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState('2026-01');
+  const [generatingLeaderboard, setGeneratingLeaderboard] = useState(false);
+  const [generateResult, setGenerateResult] = useState<string | null>(null);
+
   const handleMigrateCellId = async () => {
     if (!auth?.currentUser) {
       setMigrateResult('로그인이 필요합니다.');
@@ -164,6 +171,106 @@ export default function AdminDashboard() {
       setSnapshotResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
     } finally {
       setSnapshotting(false);
+    }
+  };
+
+  // 월별 데이터 확인
+  const handleCheckMonthlyData = async () => {
+    if (!auth?.currentUser) {
+      setMonthlyDataResult('로그인이 필요합니다.');
+      return;
+    }
+
+    setCheckingMonthlyData(true);
+    setMonthlyDataResult(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch(`/api/admin/check-monthly-data?month=${selectedMonth}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      const lines = [
+        `📅 ${data.month} 데이터 확인 결과:`,
+        ``,
+        `📊 리더보드: ${data.leaderboard.exists ? '✅ 있음' : '❌ 없음'}`,
+      ];
+
+      if (data.leaderboard.exists && data.leaderboard.data) {
+        lines.push(`   - 종합 Top: ${data.leaderboard.data.overallCount}명`);
+        lines.push(`   - 리뷰왕: ${data.leaderboard.data.reviewKingCount}명`);
+        lines.push(`   - 기록왕: ${data.leaderboard.data.recordKingCount}명`);
+        lines.push(`   - 카테고리: ${data.leaderboard.data.categoryWinners.join(', ') || '없음'}`);
+      }
+
+      lines.push(``);
+      lines.push(`👥 사용자 통계: ${data.userStats.exists ? '✅ 있음' : '❌ 없음'}`);
+      if (data.userStats.exists) {
+        lines.push(`   - 사용자 수: ${data.userStats.userCount}명`);
+        if (data.userStats.users.length > 0) {
+          lines.push(`   - 샘플: ${data.userStats.users.map((u: { reviews: number }) => `리뷰 ${u.reviews}개`).join(', ')}`);
+        }
+      }
+
+      setMonthlyDataResult(lines.join('\n'));
+    } catch (err) {
+      setMonthlyDataResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setCheckingMonthlyData(false);
+    }
+  };
+
+  // 리더보드 생성
+  const handleGenerateLeaderboard = async () => {
+    if (!auth?.currentUser) {
+      setGenerateResult('로그인이 필요합니다.');
+      return;
+    }
+
+    if (!confirm(`${selectedMonth} 리더보드를 생성합니다. 계속하시겠습니까?`)) {
+      return;
+    }
+
+    setGeneratingLeaderboard(true);
+    setGenerateResult(null);
+    try {
+      const token = await auth.currentUser.getIdToken();
+      const res = await fetch('/api/admin/generate-leaderboard', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ month: selectedMonth }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.suggestion);
+
+      const lines = [
+        `✅ ${data.month} 리더보드 생성 완료!`,
+        ``,
+        `📊 통계:`,
+        `   - 총 사용자: ${data.stats.totalUsers}명`,
+        `   - 종합 Top: ${data.stats.overallCount}명`,
+        `   - 리뷰왕: ${data.stats.reviewKingCount}명`,
+        `   - 기록왕: ${data.stats.recordKingCount}명`,
+        `   - 카테고리 챔피언: ${data.stats.categoryWinnerCount}개`,
+      ];
+
+      if (data.preview.top3Overall.length > 0) {
+        lines.push(``);
+        lines.push(`🏆 종합 Top 3:`);
+        data.preview.top3Overall.forEach((entry: { nickname: string; value: number }, i: number) => {
+          lines.push(`   ${i + 1}위: ${entry.nickname} (${entry.value}점)`);
+        });
+      }
+
+      setGenerateResult(lines.join('\n'));
+    } catch (err) {
+      setGenerateResult(`실패: ${err instanceof Error ? err.message : '알 수 없는 오류'}`);
+    } finally {
+      setGeneratingLeaderboard(false);
     }
   };
 
@@ -423,7 +530,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Trigger Snapshot */}
-        <div>
+        <div className="mb-6 pb-6 border-b border-gray-200">
           <h3 className="text-sm font-medium text-gray-800 mb-2">2. Snapshot 트리거</h3>
           <p className="text-sm text-gray-600 mb-3">
             현재 월의 리더보드(monthly_leaderboard)와 서비스 통계(monthly_service_stats)를 생성합니다.
@@ -439,6 +546,47 @@ export default function AdminDashboard() {
             <p className={`mt-3 text-sm whitespace-pre-line ${snapshotResult.startsWith('실패') ? 'text-red-600' : 'text-green-600'}`}>
               {snapshotResult}
             </p>
+          )}
+        </div>
+
+        {/* 월별 데이터 확인 및 생성 */}
+        <div>
+          <h3 className="text-sm font-medium text-gray-800 mb-2">3. 특정 월 리더보드 생성</h3>
+          <p className="text-sm text-gray-600 mb-3">
+            과거 월의 monthly_user_stats를 기반으로 리더보드를 생성합니다.
+          </p>
+          <div className="flex items-center gap-3 mb-3">
+            <input
+              type="text"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              placeholder="YYYY-MM"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm w-32"
+            />
+            <button
+              onClick={handleCheckMonthlyData}
+              disabled={checkingMonthlyData}
+              className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {checkingMonthlyData ? '확인 중...' : '데이터 확인'}
+            </button>
+            <button
+              onClick={handleGenerateLeaderboard}
+              disabled={generatingLeaderboard}
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {generatingLeaderboard ? '생성 중...' : '리더보드 생성'}
+            </button>
+          </div>
+          {monthlyDataResult && (
+            <pre className={`mt-3 text-sm whitespace-pre-line p-3 bg-gray-50 rounded-lg ${monthlyDataResult.startsWith('실패') ? 'text-red-600' : 'text-gray-700'}`}>
+              {monthlyDataResult}
+            </pre>
+          )}
+          {generateResult && (
+            <pre className={`mt-3 text-sm whitespace-pre-line p-3 bg-gray-50 rounded-lg ${generateResult.startsWith('실패') ? 'text-red-600' : 'text-green-700'}`}>
+              {generateResult}
+            </pre>
           )}
         </div>
       </div>

@@ -12,7 +12,6 @@ import {
   CategoryKey,
 } from '@/types';
 import {
-  getCurrentMonthKey,
   getPreviousMonthKey,
   getNextMonthKey,
   formatMonthKey,
@@ -41,7 +40,7 @@ const PODIUM_TEXT = [
 
 export default function LeaderboardPage() {
   const { user, loading: authLoading } = useAuth();
-  const [monthKey, setMonthKey] = useState(getCurrentMonthKey());
+  const [monthKey, setMonthKey] = useState(getPreviousMonthKey());
   const [leaderboard, setLeaderboard] = useState<MonthlyLeaderboard | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabType>('overall');
@@ -91,13 +90,13 @@ export default function LeaderboardPage() {
 
   const goToNextMonth = () => {
     const next = getNextMonthKey(monthKey);
-    const current = getCurrentMonthKey();
-    if (next <= current) {
+    const latestAvailable = getPreviousMonthKey(); // 이전 월까지만 조회 가능
+    if (next <= latestAvailable) {
       setMonthKey(next);
     }
   };
 
-  const isCurrentMonth = monthKey === getCurrentMonthKey();
+  const isLatestMonth = monthKey === getPreviousMonthKey();
 
   // 현재 탭에 맞는 리더보드 데이터
   const getCurrentEntries = (): LeaderboardEntry[] => {
@@ -172,7 +171,7 @@ export default function LeaderboardPage() {
           </span>
           <button
             onClick={goToNextMonth}
-            disabled={isCurrentMonth}
+            disabled={isLatestMonth}
             className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -209,8 +208,8 @@ export default function LeaderboardPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
             </div>
-            <p className="text-gray-600">아직 이 달의 데이터가 없습니다.</p>
-            <p className="text-sm text-gray-400 mt-1">리뷰를 작성하면 리더보드에 반영됩니다.</p>
+            <p className="text-gray-600">{formatMonthKey(monthKey)} 데이터가 없습니다.</p>
+            <p className="text-sm text-gray-400 mt-1">다른 월을 선택해보세요.</p>
           </div>
         ) : (
           <>
