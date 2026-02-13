@@ -21,6 +21,7 @@ import {
   DUPLICATE_THRESHOLD_METERS,
 } from '@/lib/utils/geohash';
 import { inferCategoryKey } from '@/lib/utils/categoryIcon';
+import { computeAverageTier } from '@/lib/utils/tierCalculation';
 
 /**
  * 최근 장소 N개 가져오기
@@ -173,23 +174,11 @@ export async function unhidePlace(placeId: string) {
 }
 
 /**
- * tierCounts에서 평균 등급 계산
+ * PlaceStats에서 평균 등급 계산 (공유 유틸리티 사용)
  */
 function calculateAvgTier(stats: PlaceStats | null): RatingTier | null {
   if (!stats || stats.reviewCount === 0) return null;
-
-  const tierWeights: Record<RatingTier, number> = { S: 5, A: 4, B: 3, C: 2, F: 1 };
-  const totalWeight = Object.entries(stats.tierCounts).reduce(
-    (sum, [tier, count]) => sum + tierWeights[tier as RatingTier] * count,
-    0
-  );
-  const avgWeight = totalWeight / stats.reviewCount;
-
-  if (avgWeight >= 4.5) return 'S';
-  if (avgWeight >= 3.5) return 'A';
-  if (avgWeight >= 2.5) return 'B';
-  if (avgWeight >= 1.5) return 'C';
-  return 'F';
+  return computeAverageTier(stats.tierCounts, stats.reviewCount);
 }
 
 /**

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { requireMember } from '@/lib/auth/verifyAuth';
 
 /**
  * GET /api/me/reviews?offset=0&limit=5
@@ -7,37 +7,17 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
  */
 export async function GET(req: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const uid = decodedToken.uid;
-
-    const userDoc = await adminDb.collection('users').doc(uid).get();
-    const userData = userDoc.data();
-    if (!userData || !['member', 'owner'].includes(userData.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden: Member or Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireMember(req);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
+    const uid = auth.uid;
 
     const { searchParams } = new URL(req.url);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
     const limit = parseInt(searchParams.get('limit') || '5', 10);
 
     // limit+1개 조회해서 hasMore 판별
-    const reviewsSnap = await adminDb
+    const reviewsSnap = await db
       .collection('reviews')
       .where('uid', '==', uid)
       .orderBy('createdAt', 'desc')
@@ -56,7 +36,7 @@ export async function GET(req: NextRequest) {
     for (let i = 0; i < placeIds.length; i += BATCH_SIZE) {
       const batch = placeIds.slice(i, i + BATCH_SIZE);
       const placeDocs = await Promise.all(
-        batch.map((id) => adminDb!.collection('places').doc(id).get())
+        batch.map((id) => db.collection('places').doc(id).get())
       );
       placeDocs.forEach((pDoc) => {
         if (pDoc.exists) {

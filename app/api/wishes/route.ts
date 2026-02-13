@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { requireMember } from '@/lib/auth/verifyAuth';
 
 /**
  * POST /api/wishes
@@ -7,35 +7,9 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
  */
 export async function POST(req: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || !['member', 'owner'].includes(userData.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden: Member or Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireMember(req);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     const body = await req.json();
     const { placeId, note } = body;
@@ -48,10 +22,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 중복 체크 (이미 위시한 장소인지)
-    const existingWishSnap = await adminDb
+    const existingWishSnap = await db
       .collection('wishes')
       .where('placeId', '==', placeId)
-      .where('uid', '==', decodedToken.uid)
+      .where('uid', '==', auth.uid)
       .limit(1)
       .get();
 
@@ -63,15 +37,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 위시 생성
-    const wishDoc = await adminDb.collection('wishes').add({
+    const wishDoc = await db.collection('wishes').add({
       placeId,
-      uid: decodedToken.uid,
+      uid: auth.uid,
       note: note || null,
       createdAt: new Date(),
     });
 
     // PlaceStats의 wishCount 업데이트
-    const statsRef = adminDb.collection('stats').doc(placeId);
+    const statsRef = db.collection('stats').doc(placeId);
     const statsSnap = await statsRef.get();
 
     if (statsSnap.exists) {
@@ -93,7 +67,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       wishId: wishDoc.id,
       placeId,
-      uid: decodedToken.uid,
+      uid: auth.uid,
       note: note || null,
       createdAt: new Date().toISOString(),
     });
@@ -109,48 +83,18 @@ export async function POST(req: NextRequest) {
 /**
  * GET /api/wishes?uid={uid}&placeId={placeId}
  * 위시리스트 조회
- * - uid가 있으면: 해당 사용자의 위시리스트
- * - placeId가 있으면: 해당 장소를 위시한 사용자들
- * - 둘 다 있으면: 해당 사용자가 해당 장소를 위시했는지 확인
  */
 export async function GET(req: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || !['member', 'owner'].includes(userData.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden: Member or Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireMember(req);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     const { searchParams } = new URL(req.url);
     const uid = searchParams.get('uid');
     const placeId = searchParams.get('placeId');
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query: any = adminDb.collection('wishes');
+    let query: FirebaseFirestore.Query = db.collection('wishes');
 
     if (uid) {
       query = query.where('uid', '==', uid);
@@ -162,8 +106,7 @@ export async function GET(req: NextRequest) {
 
     const snapshot = await query.get();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const wishes = snapshot.docs.map((doc: any) => {
+    const wishes = snapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         wishId: doc.id,

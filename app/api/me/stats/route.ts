@@ -1,23 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { requireMember } from '@/lib/auth/verifyAuth';
 import { CATEGORY_LABELS, inferCategoryKey } from '@/lib/utils/categoryIcon';
 import { RatingTier, CategoryKey } from '@/types';
-
-const TIER_WEIGHTS: Record<RatingTier, number> = { S: 5, A: 4, B: 3, C: 2, F: 1 };
-
-function computeAverageTier(tierCounts: Record<RatingTier, number>, total: number): RatingTier | null {
-  if (total === 0) return null;
-  const sum = Object.entries(tierCounts).reduce(
-    (acc, [tier, count]) => acc + TIER_WEIGHTS[tier as RatingTier] * count,
-    0
-  );
-  const avg = sum / total;
-  if (avg >= 4.5) return 'S';
-  if (avg >= 3.5) return 'A';
-  if (avg >= 2.5) return 'B';
-  if (avg >= 1.5) return 'C';
-  return 'F';
-}
+import { computeAverageTier } from '@/lib/utils/tierCalculation';
 
 /**
  * GET /api/me/stats
@@ -25,40 +10,20 @@ function computeAverageTier(tierCounts: Record<RatingTier, number>, total: numbe
  */
 export async function GET(req: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-    const uid = decodedToken.uid;
-
-    const userDoc = await adminDb.collection('users').doc(uid).get();
-    const userData = userDoc.data();
-    if (!userData || !['member', 'owner'].includes(userData.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden: Member or Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireMember(req);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
+    const uid = auth.uid;
 
     // 1. 리뷰 전체 조회
-    const reviewsSnap = await adminDb
+    const reviewsSnap = await db
       .collection('reviews')
       .where('uid', '==', uid)
       .orderBy('createdAt', 'desc')
       .get();
 
     // 2. 위시 수 조회
-    const wishesSnap = await adminDb
+    const wishesSnap = await db
       .collection('wishes')
       .where('uid', '==', uid)
       .get();
@@ -68,12 +33,11 @@ export async function GET(req: NextRequest) {
     const tagCounts: Record<string, number> = {};
     const revisitStats = { yes: 0, no: 0, unknown: 0 };
     const uniquePlaceIds = new Set<string>();
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const allReviews: any[] = [];
+    const allReviews: { reviewId: string; placeId: string; ratingTier: string; [key: string]: unknown }[] = [];
 
     reviewsSnap.docs.forEach((doc) => {
       const data = doc.data();
-      allReviews.push({ reviewId: doc.id, ...data });
+      allReviews.push({ reviewId: doc.id, ...data } as typeof allReviews[number]);
 
       // 등급 집계
       if (data.ratingTier && tierCounts[data.ratingTier as RatingTier] !== undefined) {
@@ -119,7 +83,7 @@ export async function GET(req: NextRequest) {
     for (let i = 0; i < placeIdArray.length; i += BATCH_SIZE) {
       const batch = placeIdArray.slice(i, i + BATCH_SIZE);
       const placePromises = batch.map((id) =>
-        adminDb!.collection('places').doc(id).get()
+        db.collection('places').doc(id).get()
       );
       const placeDocs = await Promise.all(placePromises);
 
@@ -168,8 +132,8 @@ export async function GET(req: NextRequest) {
       placeId: r.placeId,
       placeName: placeMap.get(r.placeId)?.name || '알 수 없음',
       ratingTier: r.ratingTier,
-      oneLineReview: r.oneLineReview || null,
-      createdAt: r.createdAt?.toDate?.()?.toISOString?.() || new Date().toISOString(),
+      oneLineReview: (r as Record<string, unknown>).oneLineReview || null,
+      createdAt: ((r as Record<string, unknown>).createdAt as { toDate?: () => Date })?.toDate?.()?.toISOString?.() || new Date().toISOString(),
     }));
 
     return NextResponse.json({

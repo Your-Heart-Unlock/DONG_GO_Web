@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
+import { adminDb, adminStorage } from '@/lib/firebase/admin';
+import { requireMember } from '@/lib/auth/verifyAuth';
 
 /**
  * POST /api/places/[placeId]/photos
@@ -10,35 +11,16 @@ export async function POST(
   { params }: { params: Promise<{ placeId: string }> }
 ) {
   try {
-    // 인증 확인
-    if (!adminAuth || !adminDb || !adminStorage) {
+    if (!adminStorage) {
       return NextResponse.json(
         { error: 'Firebase Admin not initialized' },
         { status: 500 }
       );
     }
 
-    const authHeader = req.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || !['member', 'owner'].includes(userData.role)) {
-      return NextResponse.json(
-        { error: 'Forbidden: Member or Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireMember(req);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     const { placeId } = await params;
 
@@ -92,18 +74,18 @@ export async function POST(
     const url = `https://storage.googleapis.com/${bucket.name}/places/${placeId}/${fileName}`;
 
     // Admin SDK로 Firestore에 메타데이터 저장
-    const photoDoc = await adminDb.collection('photos').add({
+    const photoDoc = await db.collection('photos').add({
       placeId,
       url,
       fileName,
-      uploadedBy: decodedToken.uid,
+      uploadedBy: auth.uid,
       uploadedAt: new Date(),
     });
 
     return NextResponse.json({
       photoId: photoDoc.id,
       url,
-      uploadedBy: decodedToken.uid,
+      uploadedBy: auth.uid,
       uploadedAt: new Date().toISOString(),
     });
   } catch (error) {

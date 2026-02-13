@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
+import { admin } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 import {
   MonthlyUserStats,
   LeaderboardEntry,
@@ -23,25 +24,9 @@ const VALID_CATEGORIES: CategoryKey[] = [
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json({ error: 'Firebase Admin not initialized' }, { status: 500 });
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json({ error: 'Forbidden: Owner role required' }, { status: 403 });
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     const body = await request.json();
     const { month } = body;
@@ -51,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 1. monthly_user_stats 수집
-    const userStatsSnapshot = await adminDb
+    const userStatsSnapshot = await db
       .collection('monthly_user_stats')
       .doc(month)
       .collection('users')
@@ -84,7 +69,7 @@ export async function POST(request: NextRequest) {
     const uids = Array.from(userStatsMap.keys());
     for (const uid of uids) {
       try {
-        const userDoc = await adminDb.collection('users').doc(uid).get();
+        const userDoc = await db.collection('users').doc(uid).get();
         if (userDoc.exists) {
           uidToNickname.set(uid, userDoc.data()?.nickname || '익명');
         }
@@ -157,7 +142,7 @@ export async function POST(request: NextRequest) {
       hiddenCount: 0,
     };
 
-    await adminDb
+    await db
       .collection('monthly_leaderboard')
       .doc(month)
       .set(leaderboard);

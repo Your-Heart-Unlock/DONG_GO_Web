@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
+import { admin } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 import { RatingTier, CategoryKey } from '@/types';
 import { getMonthKeyFromDate } from '@/lib/utils/monthKey';
 import { calculateRecordPoints } from '@/lib/utils/recordPoints';
@@ -13,35 +14,12 @@ import { calculateRecordPoints } from '@/lib/utils/recordPoints';
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // 모든 리뷰 스캔
-    const reviewsSnapshot = await adminDb.collection('reviews').get();
+    const reviewsSnapshot = await db.collection('reviews').get();
 
     // monthKey -> uid -> aggregated stats
     const monthStats = new Map<string, Map<string, {
@@ -77,7 +55,7 @@ export async function POST(request: NextRequest) {
       let categoryKey = placeCategoryCache.get(placeId);
       if (categoryKey === undefined && !placeCategoryCache.has(placeId)) {
         try {
-          const placeDoc = await adminDb.collection('places').doc(placeId).get();
+          const placeDoc = await db.collection('places').doc(placeId).get();
           categoryKey = placeDoc.exists ? placeDoc.data()?.categoryKey : undefined;
         } catch {
           categoryKey = undefined;
@@ -138,11 +116,11 @@ export async function POST(request: NextRequest) {
       const batchSize = 500;
 
       for (let i = 0; i < entries.length; i += batchSize) {
-        const batch = adminDb.batch();
+        const batch = db.batch();
         const chunk = entries.slice(i, i + batchSize);
 
         for (const [uid, stats] of chunk) {
-          const statsRef = adminDb
+          const statsRef = db
             .collection('monthly_user_stats')
             .doc(monthKey)
             .collection('users')
@@ -166,9 +144,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Admin log 기록
-    await adminDb.collection('admin_logs').add({
+    await db.collection('admin_logs').add({
       action: 'BACKFILL_AGGREGATES',
-      performedBy: decodedToken.uid,
+      performedBy: auth.uid,
       metadata: {
         processedReviews,
         skippedReviews,

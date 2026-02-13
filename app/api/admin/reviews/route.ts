@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 
 /**
  * GET /api/admin/reviews
@@ -7,35 +7,9 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
  */
 export async function GET(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // 쿼리 파라미터
     const { searchParams } = new URL(request.url);
@@ -43,7 +17,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     // 리뷰 조회 (최신순)
-    const reviewsSnapshot = await adminDb
+    const reviewsSnapshot = await db
       .collection('reviews')
       .orderBy('createdAt', 'desc')
       .limit(limit + offset + 1) // hasMore 체크용
@@ -60,7 +34,7 @@ export async function GET(request: NextRequest) {
     // 장소 정보 조회
     const placesMap: Record<string, { name: string; address: string }> = {};
     if (placeIds.length > 0) {
-      const placesSnapshot = await adminDb
+      const placesSnapshot = await db
         .collection('places')
         .where('__name__', 'in', placeIds.slice(0, 30)) // Firestore in 쿼리 제한
         .get();
@@ -77,7 +51,7 @@ export async function GET(request: NextRequest) {
     // 사용자 닉네임 조회
     const usersMap: Record<string, string> = {};
     if (userIds.length > 0) {
-      const usersSnapshot = await adminDb
+      const usersSnapshot = await db
         .collection('users')
         .where('__name__', 'in', userIds.slice(0, 30))
         .get();

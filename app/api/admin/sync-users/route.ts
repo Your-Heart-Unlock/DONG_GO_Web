@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { adminAuth } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 
 /**
  * POST /api/admin/sync-users
@@ -7,42 +8,16 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const callerDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const callerData = callerDoc.data();
-
-    if (!callerData || callerData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // Firebase Auth 사용자 전체 목록 가져오기 (1000명 단위 페이지네이션)
     const authUsers: { uid: string; email: string; displayName?: string }[] = [];
     let nextPageToken: string | undefined;
 
     do {
-      const listResult = await adminAuth.listUsers(1000, nextPageToken);
+      const listResult = await adminAuth!.listUsers(1000, nextPageToken);
       listResult.users.forEach((userRecord) => {
         authUsers.push({
           uid: userRecord.uid,
@@ -55,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     // Firestore에 이미 존재하는 사용자 확인
     const existingUids = new Set<string>();
-    const usersSnapshot = await adminDb.collection('users').get();
+    const usersSnapshot = await db.collection('users').get();
     usersSnapshot.docs.forEach((doc) => {
       existingUids.add(doc.id);
     });
@@ -75,12 +50,12 @@ export async function POST(request: NextRequest) {
 
     // 누락된 사용자 Firestore에 생성 (batch 처리)
     const BATCH_SIZE = 500;
-    let batch = adminDb.batch();
+    let batch = db.batch();
     let batchCount = 0;
     let synced = 0;
 
     for (const user of missingUsers) {
-      const userRef = adminDb.collection('users').doc(user.uid);
+      const userRef = db.collection('users').doc(user.uid);
       batch.set(userRef, {
         email: user.email,
         nickname: '', // 빈 문자열로 생성 → 로그인 시 온보딩 페이지로 이동
@@ -94,7 +69,7 @@ export async function POST(request: NextRequest) {
 
       if (batchCount >= BATCH_SIZE) {
         await batch.commit();
-        batch = adminDb.batch();
+        batch = db.batch();
         batchCount = 0;
       }
     }

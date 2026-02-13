@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
+import { admin } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 
 const CELL_SIZE = 0.01;
 
@@ -16,38 +17,19 @@ function computeCellId(lat: number, lng: number): string {
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json({ error: 'Forbidden: Owner role required' }, { status: 403 });
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // cellId가 없는 places 조회
-    const placesSnap = await adminDb.collection('places').get();
+    const placesSnap = await db.collection('places').get();
 
     let updated = 0;
     let skipped = 0;
     let failed = 0;
 
     const BATCH_SIZE = 500;
-    let batch = adminDb.batch();
+    let batch = db.batch();
     let batchCount = 0;
 
     for (const doc of placesSnap.docs) {
@@ -73,7 +55,7 @@ export async function POST(request: NextRequest) {
       // 500개마다 커밋
       if (batchCount >= BATCH_SIZE) {
         await batch.commit();
-        batch = adminDb.batch();
+        batch = db.batch();
         batchCount = 0;
       }
     }
@@ -84,9 +66,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 로그 기록
-    await adminDb.collection('admin_logs').add({
+    await db.collection('admin_logs').add({
       action: 'MIGRATE_CELLID',
-      performedBy: decodedToken.uid,
+      performedBy: auth.uid,
       metadata: { total: placesSnap.size, updated, skipped, failed },
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });

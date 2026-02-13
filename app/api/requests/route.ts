@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { requireMember, requireOwner } from '@/lib/auth/verifyAuth';
 
 /**
  * POST /api/requests
@@ -7,35 +7,9 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Member 또는 Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || (userData.role !== 'member' && userData.role !== 'owner')) {
-      return NextResponse.json(
-        { error: 'Forbidden: Member or Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireMember(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     const body = await request.json();
     const { type, placeId, payload } = body;
@@ -57,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // 장소 존재 확인
-    const placeDoc = await adminDb.collection('places').doc(placeId).get();
+    const placeDoc = await db.collection('places').doc(placeId).get();
     if (!placeDoc.exists) {
       return NextResponse.json(
         { error: 'Place not found' },
@@ -66,11 +40,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 이미 동일한 요청이 열려있는지 확인
-    const existingRequestSnap = await adminDb
+    const existingRequestSnap = await db
       .collection('requests')
       .where('type', '==', type)
       .where('placeId', '==', placeId)
-      .where('requestedBy', '==', decodedToken.uid)
+      .where('requestedBy', '==', auth.uid)
       .where('status', '==', 'open')
       .limit(1)
       .get();
@@ -83,10 +57,10 @@ export async function POST(request: NextRequest) {
     }
 
     // 요청 생성
-    const requestDoc = await adminDb.collection('requests').add({
+    const requestDoc = await db.collection('requests').add({
       type,
       placeId,
-      requestedBy: decodedToken.uid,
+      requestedBy: auth.uid,
       payload: payload || null,
       status: 'open',
       createdAt: new Date(),
@@ -111,35 +85,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // 쿼리 파라미터
     const { searchParams } = new URL(request.url);
@@ -147,8 +95,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // place_delete, place_edit
 
     // 요청 목록 조회
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let query: any = adminDb.collection('requests');
+    let query: FirebaseFirestore.Query = db.collection('requests');
 
     if (status) {
       query = query.where('status', '==', status);
@@ -160,18 +107,15 @@ export async function GET(request: NextRequest) {
 
     const snapshot = await query.get();
 
-    // 클라이언트 사이드 정렬 (복합 인덱스 없이 사용하기 위해)
-
     // 요청 목록에 장소 이름과 요청자 닉네임 추가
     const requests = await Promise.all(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      snapshot.docs.map(async (doc: any) => {
+      snapshot.docs.map(async (doc) => {
         const data = doc.data();
 
         // 장소 이름 조회
         let placeName = '알 수 없음';
         try {
-          const placeDoc = await adminDb!.collection('places').doc(data.placeId).get();
+          const placeDoc = await db.collection('places').doc(data.placeId).get();
           if (placeDoc.exists) {
             placeName = placeDoc.data()?.name || '알 수 없음';
           }
@@ -180,7 +124,7 @@ export async function GET(request: NextRequest) {
         // 요청자 닉네임 조회
         let requesterNickname = '알 수 없음';
         try {
-          const userDoc = await adminDb!.collection('users').doc(data.requestedBy).get();
+          const userDoc = await db.collection('users').doc(data.requestedBy).get();
           if (userDoc.exists) {
             requesterNickname = userDoc.data()?.nickname || '알 수 없음';
           }

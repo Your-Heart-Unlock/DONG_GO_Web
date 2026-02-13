@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 
 /**
  * Admin Users API
@@ -7,38 +7,12 @@ import { adminDb, adminAuth } from '@/lib/firebase/admin';
  */
 export async function GET(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const callerDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const callerData = callerDoc.data();
-
-    if (!callerData || callerData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // 사용자 목록 조회
-    const usersSnapshot = await adminDb
+    const usersSnapshot = await db
       .collection('users')
       .orderBy('createdAt', 'desc')
       .get();

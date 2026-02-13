@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
+import { admin } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 import { ImportRow, ImportDuplicatePolicy } from '@/types';
 import { computeCellId } from '@/lib/utils/cellId';
 import { inferCategoryKey } from '@/lib/utils/categoryIcon';
@@ -18,36 +19,9 @@ import { encodeGeohash } from '@/lib/utils/geohash';
  */
 export async function POST(request: NextRequest) {
   try {
-    // Firebase Admin 초기화 확인
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // Request body 파싱
     const body = await request.json();
@@ -79,11 +53,11 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < batches; i++) {
       const batchRows = rows.slice(i * BATCH_SIZE, (i + 1) * BATCH_SIZE);
-      const batch = adminDb.batch();
+      const batch = db.batch();
 
       for (const row of batchRows) {
         try {
-          const placeRef = adminDb.collection('places').doc(row.placeId);
+          const placeRef = db.collection('places').doc(row.placeId);
           const existing = await placeRef.get();
 
           if (existing.exists) {
@@ -137,7 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Admin log 기록
-    await adminDb.collection('admin_logs').add({
+    await db.collection('admin_logs').add({
       action: 'IMPORT_PLACES',
       performedBy: ownerUid,
       metadata: {

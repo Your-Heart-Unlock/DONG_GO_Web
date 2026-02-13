@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
+import { admin } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 import { CategoryKey } from '@/types';
 import { CATEGORY_LABELS } from '@/lib/utils/categoryIcon';
 
@@ -32,36 +33,9 @@ interface CategoryUpdate {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    // Firebase Admin 초기화 확인
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // Request body 파싱
     const body = await request.json();
@@ -90,11 +64,11 @@ export async function PATCH(request: NextRequest) {
       errors: [] as string[],
     };
 
-    const batch = adminDb.batch();
+    const batch = db.batch();
 
     for (const update of updates) {
       try {
-        const placeRef = adminDb.collection('places').doc(update.placeId);
+        const placeRef = db.collection('places').doc(update.placeId);
 
         // 카테고리 라벨 가져오기
         const categoryLabel = CATEGORY_LABELS[update.categoryKey] || '기타';
@@ -115,9 +89,9 @@ export async function PATCH(request: NextRequest) {
     await batch.commit();
 
     // Admin log 기록
-    await adminDb.collection('admin_logs').add({
+    await db.collection('admin_logs').add({
       action: 'BATCH_UPDATE_CATEGORIES',
-      performedBy: decodedToken.uid,
+      performedBy: auth.uid,
       metadata: {
         total: result.total,
         updated: result.updated,
@@ -146,39 +120,22 @@ export async function PATCH(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     const { action } = await request.json();
 
     if (action === 'cleanup') {
       // categoryKey가 유효한 장소에서 categoryCode 필드 삭제
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('places')
         .where('status', '==', 'active')
         .get();
 
       let cleaned = 0;
       const batchOps: FirebaseFirestore.WriteBatch[] = [];
-      let batch = adminDb.batch();
+      let batch = db.batch();
       let opCount = 0;
 
       for (const doc of snapshot.docs) {
@@ -192,7 +149,7 @@ export async function POST(request: NextRequest) {
           opCount++;
           if (opCount === 500) {
             batchOps.push(batch);
-            batch = adminDb.batch();
+            batch = db.batch();
             opCount = 0;
           }
         }
@@ -203,9 +160,9 @@ export async function POST(request: NextRequest) {
         await b.commit();
       }
 
-      await adminDb.collection('admin_logs').add({
+      await db.collection('admin_logs').add({
         action: 'CLEANUP_CATEGORY_CODE',
-        performedBy: decodedToken.uid,
+        performedBy: auth.uid,
         metadata: { cleaned },
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });
@@ -215,14 +172,14 @@ export async function POST(request: NextRequest) {
 
     if (action === 'auto-assign') {
       // categoryCode가 CAFE/BAR인 장소에 categoryKey 자동 배정
-      const snapshot = await adminDb
+      const snapshot = await db
         .collection('places')
         .where('status', '==', 'active')
         .get();
 
       let assigned = 0;
       const batchOps: FirebaseFirestore.WriteBatch[] = [];
-      let batch = adminDb.batch();
+      let batch = db.batch();
       let opCount = 0;
 
       for (const doc of snapshot.docs) {
@@ -239,7 +196,7 @@ export async function POST(request: NextRequest) {
           opCount++;
           if (opCount === 500) {
             batchOps.push(batch);
-            batch = adminDb.batch();
+            batch = db.batch();
             opCount = 0;
           }
         }
@@ -250,9 +207,9 @@ export async function POST(request: NextRequest) {
         await b.commit();
       }
 
-      await adminDb.collection('admin_logs').add({
+      await db.collection('admin_logs').add({
         action: 'AUTO_ASSIGN_CAFE_BAR',
-        performedBy: decodedToken.uid,
+        performedBy: auth.uid,
         metadata: { assigned },
         createdAt: admin.firestore.FieldValue.serverTimestamp(),
       });

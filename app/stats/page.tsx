@@ -275,32 +275,32 @@ export default function StatsPage() {
                   </div>
                 )}
 
-                <div className="space-y-2">
+                <div className="divide-y divide-gray-100">
                   {stats.topPlaces.map((place, index) => (
                     <Link
                       key={place.placeId}
                       href={`/places/${place.placeId}`}
-                      className="flex items-center gap-3 p-3 -mx-2 rounded-lg hover:bg-gray-50 transition-colors"
+                      className="flex items-center gap-3 py-3 hover:bg-gray-50 transition-colors rounded-lg px-2 -mx-2"
                     >
-                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-700' :
-                        index === 1 ? 'bg-gray-100 text-gray-600' :
-                        index === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-gray-50 text-gray-500'
+                      <span className={`w-5 text-sm font-bold tabular-nums text-center ${
+                        index === 0 ? 'text-yellow-500' :
+                        index === 1 ? 'text-gray-400' :
+                        index === 2 ? 'text-orange-400' :
+                        'text-gray-300'
                       }`}>
                         {index + 1}
                       </span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {place.placeName}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {place.reviewCount}개 리뷰 · 평균 {place.avgTier}
-                        </p>
+                        <p className="text-sm font-medium text-gray-900 truncate">{place.placeName}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{place.reviewCount}개 리뷰</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm font-bold text-blue-600">{place.weightedScore.toFixed(2)}</p>
-                        <p className="text-xs text-gray-400">점</p>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${TIER_COLORS[place.avgTier as RatingTier]?.bg ?? 'bg-gray-100'}`}>
+                          {place.avgTier}
+                        </span>
+                        <span className="text-sm font-semibold text-gray-700 tabular-nums w-9 text-right">
+                          {place.weightedScore.toFixed(2)}
+                        </span>
                       </div>
                     </Link>
                   ))}
@@ -309,22 +309,6 @@ export default function StatsPage() {
             )}
           </>
         )}
-
-        {/* 명예의 전당 바로가기 */}
-        <Link
-          href="/leaderboard"
-          className="block bg-yellow-50 rounded-xl border border-yellow-200 p-4 hover:bg-yellow-100 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-yellow-900">명예의 전당 보기</p>
-              <p className="text-xs text-yellow-600 mt-0.5">리뷰왕, 기록왕, 카테고리 챔피언 확인</p>
-            </div>
-            <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </Link>
       </main>
     </div>
   );

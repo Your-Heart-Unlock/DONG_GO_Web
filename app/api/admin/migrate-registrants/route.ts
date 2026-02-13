@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
+import { admin } from '@/lib/firebase/admin';
+import { requireOwner } from '@/lib/auth/verifyAuth';
 
 /**
  * POST /api/admin/migrate-registrants
@@ -8,39 +9,13 @@ import { adminDb, adminAuth, admin } from '@/lib/firebase/admin';
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const callerDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const callerData = callerDoc.data();
-
-    if (!callerData || callerData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // 훈동이 계정 UUID (환경변수에서 가져오거나 하드코딩)
     // 실제로는 nickname이 "훈동"인 사용자를 찾아야 합니다
-    const usersSnapshot = await adminDb
+    const usersSnapshot = await db
       .collection('users')
       .where('nickname', '==', '훈동')
       .limit(1)
@@ -56,14 +31,14 @@ export async function POST(request: NextRequest) {
     const hoondongUid = usersSnapshot.docs[0].id;
 
     // 모든 장소 가져오기
-    const placesSnapshot = await adminDb.collection('places').get();
+    const placesSnapshot = await db.collection('places').get();
 
     let updated = 0;
     let skipped = 0;
 
     // Batch update (Firestore는 한 번에 500개까지 batch 가능)
     const BATCH_SIZE = 500;
-    let batch = adminDb.batch();
+    let batch = db.batch();
     let batchCount = 0;
 
     for (const placeDoc of placesSnapshot.docs) {
@@ -97,7 +72,7 @@ export async function POST(request: NextRequest) {
       // 500개마다 batch commit
       if (batchCount >= BATCH_SIZE) {
         await batch.commit();
-        batch = adminDb.batch();
+        batch = db.batch();
         batchCount = 0;
       }
     }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { requireMember } from '@/lib/auth/verifyAuth';
 
 /**
  * GET /api/photos
@@ -7,35 +7,9 @@ import { adminAuth, adminDb } from '@/lib/firebase/admin';
  */
 export async function GET(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Member 또는 Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || (userData.role !== 'member' && userData.role !== 'owner')) {
-      return NextResponse.json(
-        { error: 'Forbidden: Member or Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireMember(request);
+    if (!auth.success) return auth.response;
+    const db = auth.db;
 
     // 쿼리 파라미터
     const { searchParams } = new URL(request.url);
@@ -43,7 +17,7 @@ export async function GET(request: NextRequest) {
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     // 모든 사진 조회 (최신순)
-    const photosSnapshot = await adminDb
+    const photosSnapshot = await db
       .collection('photos')
       .orderBy('uploadedAt', 'desc')
       .limit(limit + 1) // hasMore 체크를 위해 +1
@@ -66,7 +40,7 @@ export async function GET(request: NextRequest) {
     const photosWithPlace = await Promise.all(
       photos.map(async (photo) => {
         try {
-          const placeDoc = await adminDb!.collection('places').doc(photo.placeId).get();
+          const placeDoc = await db.collection('places').doc(photo.placeId).get();
           const placeData = placeDoc.data();
           return {
             ...photo,

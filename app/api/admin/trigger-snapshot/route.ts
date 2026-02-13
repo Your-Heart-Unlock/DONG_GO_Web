@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb, adminAuth } from '@/lib/firebase/admin';
-import { getCurrentMonthKey, getPreviousMonthKey } from '@/lib/utils/monthKey';
+import { requireOwner } from '@/lib/auth/verifyAuth';
+import { getCurrentMonthKey } from '@/lib/utils/monthKey';
 
 /**
  * Admin: Manual Snapshot Trigger
@@ -10,32 +10,8 @@ import { getCurrentMonthKey, getPreviousMonthKey } from '@/lib/utils/monthKey';
  */
 export async function POST(request: NextRequest) {
   try {
-    if (!adminAuth || !adminDb) {
-      return NextResponse.json(
-        { error: 'Firebase Admin not initialized' },
-        { status: 500 }
-      );
-    }
-
-    // 인증 확인
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const token = authHeader.split('Bearer ')[1];
-    const decodedToken = await adminAuth.verifyIdToken(token);
-
-    // Owner 권한 확인
-    const userDoc = await adminDb.collection('users').doc(decodedToken.uid).get();
-    const userData = userDoc.data();
-
-    if (!userData || userData.role !== 'owner') {
-      return NextResponse.json(
-        { error: 'Forbidden: Owner role required' },
-        { status: 403 }
-      );
-    }
+    const auth = await requireOwner(request);
+    if (!auth.success) return auth.response;
 
     // Body에서 monthKey 가져오기
     let body: { monthKey?: string } = {};
@@ -68,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      triggeredBy: decodedToken.uid,
+      triggeredBy: auth.uid,
       monthKey: targetMonthKey,
       result,
     });

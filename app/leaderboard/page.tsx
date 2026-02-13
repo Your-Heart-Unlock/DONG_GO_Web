@@ -305,22 +305,6 @@ export default function LeaderboardPage() {
             )}
           </>
         )}
-
-        {/* 서비스 통계 바로가기 */}
-        <Link
-          href="/stats"
-          className="block bg-blue-50 rounded-xl border border-blue-200 p-4 hover:bg-blue-100 transition-colors"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-blue-900">서비스 통계 보기</p>
-              <p className="text-xs text-blue-600 mt-0.5">전체 리뷰, 장소, 등급 분포 확인</p>
-            </div>
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </Link>
       </main>
     </div>
   );
