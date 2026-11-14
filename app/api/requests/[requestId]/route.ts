@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { isCategoryKey, originalOf } from '@/lib/admin/classification';
+import { CATEGORY_LABELS } from '@/lib/utils/categoryIcon';
 
 interface RouteParams {
   params: Promise<{ requestId: string }>;
@@ -86,9 +88,17 @@ export async function PATCH(
       } else if (requestData.type === 'place_edit') {
         // 장소 수정 (payload 내용 반영)
         if (requestData.payload) {
-          await adminDb.collection('places').doc(requestData.placeId).update({
-            ...requestData.payload,
-            updatedAt: new Date(),
+          const categoryKey = requestData.payload.categoryKey;
+          if (!isCategoryKey(categoryKey)) return NextResponse.json({ error: 'Invalid category' }, { status: 400 });
+          const ref = adminDb.collection('places').doc(requestData.placeId);
+          await adminDb.runTransaction(async tx => {
+            const current = await tx.get(ref);
+            if (!current.exists) throw new Error('Place not found');
+            tx.update(ref, {
+              categoryKey, category: CATEGORY_LABELS[categoryKey], originalCategory: originalOf(current.data()!),
+              classification: { source: 'manual', reason: `관리자 승인 카테고리 수정 요청: ${requestId}`, needsReview: categoryKey === 'Idle', version: 'manual-v1' },
+              updatedAt: new Date(),
+            });
           });
         }
       }

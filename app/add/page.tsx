@@ -247,6 +247,7 @@ function AddPlaceContent() {
               lng: place.lng,
               category: CATEGORY_LABELS[selectedCategory],
               categoryKey: selectedCategory,
+              originalCategory: existing.originalCategory || { provider: isNaver ? 'naver' : 'kakao', label: place.category, code: '', cidPath: [] },
               status: 'active',
               mapProvider: isNaver ? 'naver' : 'kakao',
               ...(crossIds.naverPlaceId && { naverPlaceId: crossIds.naverPlaceId }),
@@ -300,6 +301,7 @@ function AddPlaceContent() {
         lng: place.lng,
         category: CATEGORY_LABELS[selectedCategory], // 한글 카테고리명
         categoryKey: selectedCategory, // CategoryKey
+        originalCategory: { provider: isNaver ? 'naver' : 'kakao', label: place.category, code: '', cidPath: [] },
         source: 'user_added',
         status: 'active',
         mapProvider: isNaver ? 'naver' : 'kakao',

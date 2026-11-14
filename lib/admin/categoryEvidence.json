@@ -1,0 +1,2383 @@
+{
+  "220036/220037": {
+    "key": null,
+    "fallbackKey": "Korea",
+    "counts": {
+      "Meat": 188,
+      "Sea": 62,
+      "Korea": 294,
+      "Japan": 11,
+      "China": 1,
+      "West": 1,
+      "Snack": 9,
+      "Cafe": 1,
+      "Beer": 11
+    },
+    "share": 0.662,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "분식.json",
+      "술집.json",
+      "양식.json",
+      "오마카세.json",
+      "일식.json",
+      "중식.json",
+      "카페.json",
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220053": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 15,
+      "Sea": 4,
+      "Korea": 76,
+      "Japan": 5,
+      "West": 1,
+      "Snack": 8,
+      "Cafe": 1,
+      "Beer": 2
+    },
+    "share": 0.4167,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "분식.json",
+      "술집.json",
+      "양식.json",
+      "오마카세.json",
+      "카페.json",
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220055": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 45
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220055/230043": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 45
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220056": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220056/220594": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220058": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220058/220606": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220061": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 23
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220061/220623": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 22
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220062": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 9,
+      "China": 1,
+      "Beer": 2
+    },
+    "share": 0.75,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "중식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220062/220628": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 7,
+      "China": 1,
+      "Beer": 2
+    },
+    "share": 0.7,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "중식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220063": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220063/220645": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220064": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3,
+      "Beer": 2
+    },
+    "share": 0.6,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220064/220656": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3,
+      "Beer": 2
+    },
+    "share": 0.6,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220065": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220065/220660": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220068": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220069": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220069/220696": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220072": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220072/220705": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220073": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 28
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220073/220712": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 26
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220074": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2,
+      "Snack": 1,
+      "Beer": 2
+    },
+    "share": 0.4,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "술집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220074/220731": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2,
+      "Snack": 1
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220074/220732": {
+    "key": "Beer",
+    "fallbackKey": null,
+    "counts": {
+      "Beer": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json"
+    ]
+  },
+  "220036/220037/220075": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 172,
+      "Korea": 43,
+      "Japan": 3,
+      "Beer": 3
+    },
+    "share": 0.9663,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "술집.json",
+      "오마카세.json",
+      "일식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/1002801": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json"
+    ]
+  },
+  "220036/220037/220075/1002801/1002802": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json"
+    ]
+  },
+  "220036/220037/220075/1005881": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json"
+    ]
+  },
+  "220036/220037/220075/220733": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 54,
+      "Korea": 4,
+      "Japan": 2
+    },
+    "share": 0.9643,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "오마카세.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220764": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 7
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json"
+    ]
+  },
+  "220036/220037/220075/220764/221440": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json"
+    ]
+  },
+  "220036/220037/220075/220765": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 32,
+      "Korea": 1,
+      "Japan": 1
+    },
+    "share": 0.9697,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "일식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220765/1005530": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json"
+    ]
+  },
+  "220036/220037/220075/220765/221458": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 24,
+      "Korea": 1,
+      "Japan": 1
+    },
+    "share": 0.96,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "일식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220766": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 6,
+      "Korea": 6
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220766/221504": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 6,
+      "Korea": 6
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220767": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 59,
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220767/221540": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 56,
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220768": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 17,
+      "Beer": 1
+    },
+    "share": 0.9444,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220768/221546": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 17,
+      "Beer": 1
+    },
+    "share": 0.9444,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220769": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Korea": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220769/221553": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Korea": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220770": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2,
+      "Korea": 1
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220770/221569": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2,
+      "Korea": 1
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220771": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 3,
+      "Korea": 1
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220771/221575": {
+    "key": "Meat",
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 3,
+      "Korea": 1
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "고기집.json",
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220772": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Beer": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "술집.json"
+    ]
+  },
+  "220036/220037/220075/220772/221590": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Beer": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "술집.json"
+    ]
+  },
+  "220036/220037/220075/220774": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220075/220774/221606": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220076": {
+    "key": "Sea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 58,
+      "Korea": 25,
+      "Japan": 2
+    },
+    "share": 0.9667,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "오마카세.json",
+      "일식.json",
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220777": {
+    "key": "Sea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 4,
+      "Korea": 5
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220791": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220076/220791/221625": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220076/220792": {
+    "key": "Sea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 35,
+      "Japan": 1
+    },
+    "share": 0.9722,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "오마카세.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220792/221629": {
+    "key": "Sea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 33
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220792/221630": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Japan": 1
+    },
+    "share": 0.5,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "오마카세.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220793": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220076/220793/221633": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220076/220794": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Korea": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220794/221642": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Korea": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220796": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220076/220796/221653": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220076/220797": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Korea": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220797/221671": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Korea": 2
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220799": {
+    "key": "Sea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 4,
+      "Japan": 1
+    },
+    "share": 0.8,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220799/1006317": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 3,
+      "Japan": 1
+    },
+    "share": 0.75,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "일식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220801": {
+    "key": "Sea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 11,
+      "Korea": 1
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220801/221674": {
+    "key": "Sea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 10,
+      "Korea": 1
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220802": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Korea": 4
+    },
+    "share": 0.8,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220076/220802/221677": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Korea": 4
+    },
+    "share": 0.8,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220037/220078": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 15
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220037/220079": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220038": {
+    "key": null,
+    "fallbackKey": "Japan",
+    "counts": {
+      "Sea": 5,
+      "Korea": 3,
+      "Japan": 190,
+      "West": 1,
+      "Asian": 1,
+      "Snack": 1,
+      "Beer": 3
+    },
+    "share": 0.9453,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "술집.json",
+      "양식.json",
+      "오마카세.json",
+      "일식.json",
+      "한식.json",
+      "해산물.json",
+      "해외음식.json"
+    ]
+  },
+  "220036/220038/220081": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 4,
+      "Japan": 81,
+      "Snack": 1,
+      "Beer": 2
+    },
+    "share": 0.9205,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "분식.json",
+      "술집.json",
+      "오마카세.json",
+      "일식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220038/220081/220804": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 4,
+      "Japan": 78,
+      "Snack": 1,
+      "Beer": 2
+    },
+    "share": 0.9176,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "분식.json",
+      "술집.json",
+      "오마카세.json",
+      "일식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220038/220082": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 28,
+      "West": 1
+    },
+    "share": 0.9655,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "양식.json",
+      "일식.json"
+    ]
+  },
+  "220036/220038/220082/220812": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 26,
+      "West": 1
+    },
+    "share": 0.963,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "양식.json",
+      "일식.json"
+    ]
+  },
+  "220036/220038/220083": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220038/220083/220821": {
+    "key": "Korea",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "한식.json"
+    ]
+  },
+  "220036/220038/220086": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 9,
+      "Beer": 1
+    },
+    "share": 0.9,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json",
+      "일식.json"
+    ]
+  },
+  "220036/220038/220086/220838": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 9
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220038/220087": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 35
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220038/220087/1005286": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220038/220087/220844": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 30
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220038/220088": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220038/220088/220847": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220038/220089": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Japan": 30
+    },
+    "share": 0.9677,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "오마카세.json",
+      "일식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220038/220089/220850": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Japan": 30
+    },
+    "share": 0.9677,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "오마카세.json",
+      "일식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220038/220090": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2,
+      "Asian": 1
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "일식.json",
+      "해외음식.json"
+    ]
+  },
+  "220036/220038/220090/220856": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2,
+      "Asian": 1
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "일식.json",
+      "해외음식.json"
+    ]
+  },
+  "220036/220038/230614": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220038/230614/230615": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220039": {
+    "key": null,
+    "fallbackKey": "China",
+    "counts": {
+      "Meat": 2,
+      "Korea": 1,
+      "China": 50
+    },
+    "share": 0.9434,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "중식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220039/220091": {
+    "key": "China",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 1,
+      "China": 40
+    },
+    "share": 0.9756,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "중식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220039/220091/220861": {
+    "key": "China",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 1,
+      "China": 39
+    },
+    "share": 0.975,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "중식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220039/220092": {
+    "key": "China",
+    "fallbackKey": null,
+    "counts": {
+      "China": 6
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "중식.json"
+    ]
+  },
+  "220036/220039/220093": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2,
+      "China": 4
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "중식.json"
+    ]
+  },
+  "220036/220039/220093/230767": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2,
+      "China": 2
+    },
+    "share": 0.5,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "중식.json"
+    ]
+  },
+  "220036/220040": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "China": 4,
+      "Asian": 1
+    },
+    "share": 0.8,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "중식.json",
+      "해외음식.json"
+    ]
+  },
+  "220036/220040/220094": {
+    "key": "China",
+    "fallbackKey": null,
+    "counts": {
+      "China": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "중식.json"
+    ]
+  },
+  "220036/220041": {
+    "key": null,
+    "fallbackKey": "Asian",
+    "counts": {
+      "Asian": 9
+    },
+    "share": 1,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "해외음식.json"
+    ]
+  },
+  "220036/220041/220103": {
+    "key": "Asian",
+    "fallbackKey": null,
+    "counts": {
+      "Asian": 7
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "해외음식.json"
+    ]
+  },
+  "220036/220043": {
+    "key": null,
+    "fallbackKey": "Asian",
+    "counts": {
+      "Asian": 6
+    },
+    "share": 1,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "해외음식.json"
+    ]
+  },
+  "220036/220043/220124": {
+    "key": "Asian",
+    "fallbackKey": null,
+    "counts": {
+      "Asian": 6
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "해외음식.json"
+    ]
+  },
+  "220036/220044": {
+    "key": null,
+    "fallbackKey": "West",
+    "counts": {
+      "Japan": 1,
+      "West": 64,
+      "Asian": 14,
+      "Cafe": 7,
+      "Beer": 1,
+      "Snack": 1
+    },
+    "share": 0.7273,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "베이커리.json",
+      "술집.json",
+      "양식.json",
+      "일식.json",
+      "카페.json",
+      "피햄치.json",
+      "해외음식.json"
+    ]
+  },
+  "220036/220044/220126": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 1,
+      "West": 24,
+      "Asian": 2,
+      "Cafe": 1,
+      "Beer": 1
+    },
+    "share": 0.8276,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json",
+      "술집.json",
+      "양식.json",
+      "일식.json",
+      "해외음식.json"
+    ]
+  },
+  "220036/220044/220127": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 16
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "양식.json",
+      "피햄치.json"
+    ]
+  },
+  "220036/220044/220127/220913": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 4
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "양식.json",
+      "피햄치.json"
+    ]
+  },
+  "220036/220044/220127/220914": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 10
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "양식.json",
+      "피햄치.json"
+    ]
+  },
+  "220036/220044/220127/220914/230079": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 10
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "양식.json",
+      "피햄치.json"
+    ]
+  },
+  "220036/220044/220132": {
+    "key": "Asian",
+    "fallbackKey": null,
+    "counts": {
+      "Asian": 11
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "해외음식.json"
+    ]
+  },
+  "220036/220044/220132/220930": {
+    "key": "Asian",
+    "fallbackKey": null,
+    "counts": {
+      "Asian": 10
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "해외음식.json"
+    ]
+  },
+  "220036/220044/220133": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 3,
+      "Cafe": 4
+    },
+    "share": 0.5714,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "베이커리.json",
+      "양식.json",
+      "카페.json"
+    ]
+  },
+  "220036/220044/220133/220932": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 3,
+      "Cafe": 4
+    },
+    "share": 0.5714,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "베이커리.json",
+      "양식.json",
+      "카페.json"
+    ]
+  },
+  "220036/220044/220136": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 8
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "피햄치.json"
+    ]
+  },
+  "220036/220044/220136/220944": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 8
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "피햄치.json"
+    ]
+  },
+  "220036/220044/220137": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json"
+    ]
+  },
+  "220036/220044/220137/220994": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json"
+    ]
+  },
+  "220036/220044/220138": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 10,
+      "Snack": 1
+    },
+    "share": 0.9091,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "피햄치.json"
+    ]
+  },
+  "220036/220044/220138/221004": {
+    "key": "West",
+    "fallbackKey": null,
+    "counts": {
+      "West": 9,
+      "Snack": 1
+    },
+    "share": 0.9,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "피햄치.json"
+    ]
+  },
+  "220036/220046": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 3
+    },
+    "share": 1,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "오마카세.json",
+      "일식.json"
+    ]
+  },
+  "220036/220046/220167": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220046/220167/230772": {
+    "key": "Japan",
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "일식.json"
+    ]
+  },
+  "220036/220047": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 1,
+      "Snack": 3
+    },
+    "share": 0.75,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "양식.json"
+    ]
+  },
+  "220036/220047/220169": {
+    "key": "Snack",
+    "fallbackKey": null,
+    "counts": {
+      "Snack": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "분식.json"
+    ]
+  },
+  "220036/220048": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 4,
+      "China": 1,
+      "Snack": 51
+    },
+    "share": 0.9107,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "중식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220048/220185": {
+    "key": "Snack",
+    "fallbackKey": null,
+    "counts": {
+      "Snack": 13
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "분식.json"
+    ]
+  },
+  "220036/220048/220186": {
+    "key": "Snack",
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 1,
+      "Snack": 10
+    },
+    "share": 0.9091,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "분식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220048/220187": {
+    "key": "Snack",
+    "fallbackKey": null,
+    "counts": {
+      "Snack": 25
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "분식.json"
+    ]
+  },
+  "220036/220048/220189": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Korea": 3,
+      "China": 1,
+      "Snack": 1
+    },
+    "share": 0.6,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "중식.json",
+      "한식.json"
+    ]
+  },
+  "220036/220049": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Snack": 3
+    },
+    "share": 0.75,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "분식.json",
+      "피햄치.json"
+    ]
+  },
+  "220036/220049/220245": {
+    "key": "Snack",
+    "fallbackKey": null,
+    "counts": {
+      "Snack": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "피햄치.json"
+    ]
+  },
+  "220036/220049/220246": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Snack": 1
+    },
+    "share": 0.5,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "분식.json"
+    ]
+  },
+  "220036/220051": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 2,
+      "Sea": 6,
+      "Japan": 16,
+      "China": 2,
+      "West": 3,
+      "Beer": 72,
+      "Snack": 1
+    },
+    "share": 0.7059,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "술집.json",
+      "양식.json",
+      "오마카세.json",
+      "일식.json",
+      "중식.json",
+      "피햄치.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220051/220552": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Sea": 3,
+      "Japan": 2,
+      "China": 1,
+      "West": 1,
+      "Beer": 25
+    },
+    "share": 0.7576,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "술집.json",
+      "양식.json",
+      "일식.json",
+      "중식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220051/220552/221043": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Sea": 3,
+      "Japan": 2,
+      "China": 1,
+      "West": 1,
+      "Beer": 25
+    },
+    "share": 0.7576,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "술집.json",
+      "양식.json",
+      "일식.json",
+      "중식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220051/220553": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 1,
+      "Beer": 7,
+      "Snack": 1
+    },
+    "share": 0.7778,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "양식.json",
+      "피햄치.json"
+    ]
+  },
+  "220036/220051/220553/221078": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 1,
+      "Beer": 6,
+      "Snack": 1
+    },
+    "share": 0.75,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "양식.json",
+      "피햄치.json"
+    ]
+  },
+  "220036/220051/220554": {
+    "key": "Beer",
+    "fallbackKey": null,
+    "counts": {
+      "Beer": 18
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json"
+    ]
+  },
+  "220036/220051/220554/221116": {
+    "key": "Beer",
+    "fallbackKey": null,
+    "counts": {
+      "Beer": 16
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json"
+    ]
+  },
+  "220036/220051/220554/230098": {
+    "key": "Beer",
+    "fallbackKey": null,
+    "counts": {
+      "Beer": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json"
+    ]
+  },
+  "220036/220051/220555": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 1,
+      "Beer": 3
+    },
+    "share": 0.75,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "양식.json"
+    ]
+  },
+  "220036/220051/220555/221119": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 1,
+      "Beer": 3
+    },
+    "share": 0.75,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "술집.json",
+      "양식.json"
+    ]
+  },
+  "220036/220051/220556": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Sea": 2,
+      "Japan": 14,
+      "China": 1,
+      "Beer": 5
+    },
+    "share": 0.6087,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "술집.json",
+      "오마카세.json",
+      "일식.json",
+      "중식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220051/220556/221121": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Meat": 1,
+      "Sea": 2,
+      "Japan": 14,
+      "China": 1,
+      "Beer": 5
+    },
+    "share": 0.6087,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "고기집.json",
+      "술집.json",
+      "오마카세.json",
+      "일식.json",
+      "중식.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220051/220559": {
+    "key": "Beer",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Beer": 8
+    },
+    "share": 0.8889,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220051/220559/221149": {
+    "key": "Beer",
+    "fallbackKey": null,
+    "counts": {
+      "Sea": 1,
+      "Beer": 8
+    },
+    "share": 0.8889,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json",
+      "해산물.json"
+    ]
+  },
+  "220036/220051/229294": {
+    "key": "Beer",
+    "fallbackKey": null,
+    "counts": {
+      "Beer": 5
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "술집.json"
+    ]
+  },
+  "220036/220052": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 2,
+      "Cafe": 133,
+      "Beer": 1
+    },
+    "share": 0.9779,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "베이커리.json",
+      "술집.json",
+      "양식.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/1006039": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 2,
+      "Cafe": 1
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "양식.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/1006039/1006040": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "West": 2,
+      "Cafe": 1
+    },
+    "share": 0.6667,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "양식.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/220563": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 70,
+      "Beer": 1
+    },
+    "share": 0.9859,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json",
+      "술집.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/220564": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 34
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/220564/221161": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 31
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/220565": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json"
+    ]
+  },
+  "220036/220052/220565/221177": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json"
+    ]
+  },
+  "220036/220052/220572": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json"
+    ]
+  },
+  "220036/220052/220576": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 11
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "카페.json"
+    ]
+  },
+  "220036/220052/220576/221212": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 11
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "카페.json"
+    ]
+  },
+  "220036/220052/220578": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/220578/221363": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "카페.json"
+    ]
+  },
+  "220036/220052/220579": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 2
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "카페.json"
+    ]
+  },
+  "220036/220052/220580": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json",
+      "카페.json"
+    ]
+  },
+  "220036/220052/220580/221395": {
+    "key": "Cafe",
+    "fallbackKey": null,
+    "counts": {
+      "Cafe": 3
+    },
+    "share": 1,
+    "decision": "unanimous-or-80-percent; Korean umbrella excluded when Meat/Sea supported",
+    "files": [
+      "베이커리.json",
+      "카페.json"
+    ]
+  },
+  "220036/221730": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 1,
+      "China": 1,
+      "West": 1,
+      "Snack": 1
+    },
+    "share": 0.25,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "양식.json",
+      "일식.json",
+      "중식.json"
+    ]
+  },
+  "220036/221730/221731": {
+    "key": null,
+    "fallbackKey": null,
+    "counts": {
+      "Japan": 1,
+      "China": 1,
+      "West": 1,
+      "Snack": 1
+    },
+    "share": 0.25,
+    "decision": "insufficient-or-conflicting",
+    "files": [
+      "분식.json",
+      "양식.json",
+      "일식.json",
+      "중식.json"
+    ]
+  }
+}

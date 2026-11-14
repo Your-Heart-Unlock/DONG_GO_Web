@@ -87,6 +87,8 @@ export async function getPlaceById(placeId: string): Promise<Place | null> {
     const data = placeSnap.data();
     return {
       placeId: placeSnap.id,
+      originalCategory: data.originalCategory,
+      classification: data.classification,
       name: data.name,
       address: data.address,
       lat: data.lat,
@@ -131,6 +133,9 @@ export async function createPlace(place: Omit<Place, 'createdAt' | 'updatedAt'>)
     cellId: computeCellId(place.lat, place.lng),
     geohash: encodeGeohash(place.lat, place.lng),
     categoryKey: place.categoryKey || inferCategoryKey(place.category),
+    ...(place.categoryKey && !place.classification ? { classification: {
+      source: 'manual', reason: '장소 추가 화면에서 직접 선택', needsReview: place.categoryKey === 'Idle', version: 'manual-v1',
+    } } : {}),
     createdAt: serverTimestamp(),
   });
 
@@ -155,6 +160,9 @@ export async function updatePlace(placeId: string, updates: Partial<Place>) {
   const placeRef = doc(db, 'places', placeId);
   await updateDoc(placeRef, {
     ...updates,
+    ...(updates.categoryKey && !updates.classification ? { classification: {
+      source: 'manual', reason: '장소 수정 화면에서 직접 선택', needsReview: updates.categoryKey === 'Idle', version: 'manual-v1',
+    } } : {}),
     updatedAt: serverTimestamp(),
   });
 }
@@ -178,6 +186,7 @@ export async function unhidePlace(placeId: string) {
  */
 function calculateAvgTier(stats: PlaceStats | null): RatingTier | null {
   if (!stats || stats.reviewCount === 0) return null;
+
   return computeAverageTier(stats.tierCounts, stats.reviewCount);
 }
 
