@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test:import": "node --test scripts/import.test.cjs",
+    "verify:import": "node scripts/verify-import.cjs",
+    "category:evidence": "node scripts/build-category-evidence.cjs"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

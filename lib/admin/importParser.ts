@@ -1,3 +1,4 @@
+import { prepareImport, normalizePath, isCategoryKey } from './classification';
 import { NaverBookmarkExport, NaverBookmarkItem, ImportRow, ImportPreviewRow, ImportRowStatus } from '@/types';
 
 /**
@@ -14,7 +15,7 @@ export function parseImportJSON(jsonText: string): ImportRow[] {
 
     // 형태 B: Plain ImportRow Array
     if (Array.isArray(parsed)) {
-      return parsed as ImportRow[];
+      return (parsed as ImportRow[]).map(row => prepareImport(row));
     }
 
     throw new Error('지원하지 않는 JSON 형식입니다. bookmarkList 배열 또는 ImportRow 배열이 필요합니다.');
@@ -30,15 +31,22 @@ export function parseImportJSON(jsonText: string): ImportRow[] {
  * Naver Bookmark Export JSON을 ImportRow로 변환
  */
 function parseNaverBookmarkExport(data: NaverBookmarkExport): ImportRow[] {
-  return data.bookmarkList.map((bookmark: NaverBookmarkItem) => ({
+  return data.bookmarkList.map((bookmark: NaverBookmarkItem) => {
+    if (bookmark.cidPath != null && (!normalizePath(bookmark.cidPath).length && String(bookmark.cidPath).length > 0)) {
+      throw new Error(`cidPath 형식 오류: ${bookmark.sid}`);
+    }
+    return prepareImport({
     placeId: bookmark.sid,
+    originalCategory: { provider: 'naver', label: bookmark.mcidName || '', code: bookmark.mcid || '', cidPath: normalizePath(bookmark.cidPath) },
+    memo: bookmark.memo || '',
     name: bookmark.name,
     address: bookmark.address,
     lat: bookmark.py, // py = latitude
     lng: bookmark.px, // px = longitude
     category: bookmark.mcidName, // 예: "음식점"
     categoryCode: bookmark.mcid, // 예: "DINING"
-  }));
+    });
+  });
 }
 
 /**
@@ -50,7 +58,8 @@ export function validateImportRows(
 ): ImportPreviewRow[] {
   return rows.map((row) => {
     const status = determineRowStatus(row, existingPlaceIds);
-    const reason = getValidationReason(row, status);
+    if (status !== 'INVALID') existingPlaceIds.add(row.placeId);
+    const reason = getImportRowError(row) || getValidationReason(row, status);
 
     return {
       row,
@@ -68,7 +77,7 @@ function determineRowStatus(
   existingPlaceIds: Set<string>
 ): ImportRowStatus {
   // 필수 필드 체크
-  if (!row.placeId || !row.name || !row.address) {
+  if (getImportRowError(row)) {
     return 'INVALID';
   }
 
@@ -137,4 +146,18 @@ export function calculatePreviewSummary(previewRows: ImportPreviewRow[]) {
   });
 
   return summary;
+}
+
+export function getImportRowError(row: ImportRow): string | undefined {
+  if (!row || typeof row !== 'object') return '행 형식 오류';
+  if (typeof row.placeId !== 'string' || !/^[a-zA-Z0-9_-]{1,150}$/.test(row.placeId)) return '장소 ID 오류';
+  if (typeof row.name !== 'string' || !row.name.trim() || row.name.length > 300) return '장소명 오류';
+  if (typeof row.address !== 'string' || !row.address.trim() || row.address.length > 1000) return '주소 오류';
+  if (!Number.isFinite(row.lat) || !Number.isFinite(row.lng) || Math.abs(row.lat) > 90 || Math.abs(row.lng) > 180) return '좌표 오류';
+  if (typeof row.category !== 'string' || (row.categoryCode !== undefined && typeof row.categoryCode !== 'string')) return '원본 분류 오류';
+  if (row.categoryKey !== undefined && !isCategoryKey(row.categoryKey)) return '카테고리 오류';
+  if (row.memo !== undefined && (typeof row.memo !== 'string' || row.memo.length > 10000)) return '메모 오류';
+  if (row.originalCategory && (row.originalCategory.provider !== 'naver' || typeof row.originalCategory.label !== 'string' || typeof row.originalCategory.code !== 'string' || !Array.isArray(row.originalCategory.cidPath) || row.originalCategory.cidPath.length > 20 || row.originalCategory.cidPath.some(v => typeof v !== 'string' || !/^\d+$/.test(v)))) return '원본 분류 경로 오류';
+  if (row.classification && !['manual','rule','unresolved'].includes(row.classification.source)) return '가져오기 분류 출처 오류';
+  if (row.classification?.source === 'manual' && !isCategoryKey(row.categoryKey)) return '수동 카테고리 누락';
 }

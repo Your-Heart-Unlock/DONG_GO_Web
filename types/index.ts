@@ -31,6 +31,8 @@ export interface Photo {
 }
 
 export interface Place {
+  originalCategory?: OriginalCategory;
+  classification?: Classification;
   placeId: string; // 네이버 또는 카카오 지도 고유 ID
   name: string;
   address: string;
@@ -124,6 +126,7 @@ export interface Request {
 
 // Admin Import Types
 export interface NaverBookmarkItem {
+  cidPath?: string[] | string;
   sid: string; // placeId
   name: string;
   address: string;
@@ -145,6 +148,10 @@ export interface NaverBookmarkExport {
 }
 
 export interface ImportRow {
+  originalCategory?: OriginalCategory;
+  categoryKey?: CategoryKey;
+  classification?: Classification;
+  memo?: string;
   placeId: string;
   name: string;
   address: string;
@@ -152,6 +159,20 @@ export interface ImportRow {
   lng: number;
   category: string;
   categoryCode?: string;
+}
+
+export interface OriginalCategory {
+  provider: 'naver' | 'kakao';
+  label: string;
+  code: string;
+  cidPath: string[];
+}
+
+export interface Classification {
+  source: 'manual' | 'rule' | 'llm' | 'unresolved';
+  reason: string;
+  needsReview: boolean;
+  version: string;
 }
 
 export type ImportRowStatus = 'OK' | 'DUPLICATE' | 'INVALID';

@@ -64,6 +64,9 @@ export function inferCategoryKey(category: string): CategoryKey {
     return LABEL_TO_KEY[category];
   }
 
+  // 세부 음식 분류는 상위 한식/일식보다 먼저 확인한다.
+  if (/고기|구이|삼겹살|갈비|meat/.test(lower)) return 'Meat';
+  if (/해산물|횟집|seafood/.test(lower)) return 'Sea';
   // 부분 문자열 매칭
   if (lower.includes('한식') || lower.includes('korean')) return 'Korea';
   if (lower.includes('중식') || lower.includes('chinese')) return 'China';
@@ -76,7 +79,7 @@ export function inferCategoryKey(category: string): CategoryKey {
   if (lower.includes('카페') || lower.includes('디저트') || lower.includes('cafe') || lower.includes('dessert')) return 'Cafe';
   if (lower.includes('술') || lower.includes('바') || lower.includes('beer') || lower.includes('bar')) return 'Beer';
 
-  return 'Other';
+  return lower === '기타' || lower === 'other' ? 'Other' : 'Idle';
 }
 
 /**
